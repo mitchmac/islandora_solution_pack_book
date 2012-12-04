@@ -106,7 +106,6 @@ XML;
       '#title' => t('About'),
       '#weight' => 1,
       // This will be the content of the tab.
-      //'#content' => islandora_book_create_book_view($this->pid),
       '#content' => $this->create_book_view(),
     );
 
@@ -166,4 +165,3 @@ XML;
   }
 
 }
-

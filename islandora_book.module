@@ -2,308 +2,141 @@
 
 /**
  * @file
- * Islandora book solution pack module
+ *
+ * Defines all the hooks this module implements.
+ *
+ * @todo Since we don't have the tabs module, we need to create paths for Books.
  */
 
+// Permissions
+define('PERM_ISLANDORA_BOOK_DELETE_PAGE', 'delete pages');
+define('PERM_ISLANDORA_BOOK_MANAGE_BOOK', 'manage book object');
+define('PERM_ISLANDORA_BOOK_MANAGE_PAGE', 'manage page object');
+define('PERM_ISLANDORA_BOOK_MANAGE_DELETED_BOOKS', 'manage deleted books');
+// Variables
+
+
 /**
- * Islandora book menu
- * @return array
+ * Implements hook_menu().
  */
 function islandora_book_menu() {
-  $items = array();
-  $items['fedora/book'] = array(
-    'title' => t('Book view'),
-    'page callback' => 'islandora_book_create_book_view',
-    'type' => MENU_CALLBACK,
-    'access arguments' => array('view fedora collection'),
+  return array(
+    'admin/islandora/book' => array(
+      'title' => 'Book Collection',
+      'description' => 'Configuration the Book solution pack.',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('islandora_book_admin_settings_form'),
+      'access arguments' => array('administer site configuration'),
+      'file' => 'islandora_book.admin.inc',
+      'type' => MENU_NORMAL_ITEM,
+    ),
+    'fedora/book/%islandora_object/%' => array(
+      'title' => t('Book view'),
+      'page callback' => 'islandora_book_create_book_view',
+      'page arguments' => array(2, 3),
+      'access arguments' => array(FEDORA_VIEW),
+      'type' => MENU_CALLBACK,
+    ),
+    'restore/books' => array(
+      'title' => t('Deleted Books'),
+      'file' => 'management/book_undelete.inc',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('book_undelete_form'),
+      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_DELETED_BOOKS),
+      'type' => MENU_NORMAL_ITEM,
+    ),
+    'fedora/book_viewer' => array(
+      'title' => t('Book viewer'),
+      'page callback' => 'islandora_book_viewer',
+      'access arguments' => array(FEDORA_VIEW),
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/book/ocr' => array(
+      'page callback' => 'update_ocr_div',
+      'access arguments' => array(FEDORA_VIEW),
+      'file' => 'islandora_book.admin.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/book/updatepage' => array(
+      'page callback' => 'page_management_wrapper',
+      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_BOOK),
+      'file' => 'ObjectManager.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/book/upload' => array(
+      'page callback' => 'upload_pages',
+      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_BOOK),
+      'file' => 'pageload/upload_frame.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/book/borndigital' => array(
+      'page callback' => 'create_borndigital',
+      'access arguments' => array(FEDORA_VIEW),
+      'file' => 'management/born_digital.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/book/upload_setup' => array(
+      'page callback' => 'upload_setup',
+      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_BOOK),
+      'file' => 'pageload/upload_frame.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/book/process_file' => array(
+      'page callback' => 'process_file',
+      'access arguments' => array(FEDORA_VIEW),
+      'file' => 'pageload/upload_frame.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/book/process_page_directory' => array(
+      'page callback' => 'prep_add_form',
+      'access arguments' => array(FEDORA_VIEW),
+      'file' => 'pageload/prepare_add_pages_form.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/book/delete_book_files' => array(
+      'page callback' => 'delete_book_page_files',
+      'access arguments' => array(FEDORA_VIEW),
+      'file' => 'pageload/upload_frame.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/page/manage' => array(
+      'page callback' => 'islandora_book_page_management',
+      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_PAGE),
+      'file' => 'page_object_manager.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/book/manage' => array(
+      'page callback' => 'islandora_book_display_links',
+      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_BOOK),
+      'file' => 'management/IslandoraBookDisplayLinks.inc',
+      'type' => MENU_CALLBACK,
+    ),
+    'islandora/book/management' => array(
+      'page callback' => 'book_management_wrapper',
+      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_BOOK),
+      'file' => 'book_object_manager.inc',
+      'type' => MENU_CALLBACK,
+    )
   );
-  $items['restore/books'] = array(
-    'title' => t('Deleted Books'),
-    'file' => 'management/book_undelete.inc',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('book_undelete_form'),
-    'type' => MENU_NORMAL_ITEM,
-    'access arguments' => array('manage deleted books'),
-  );
-
-  $items['fedora/book_viewer'] = array(
-    'title' => t('Book viewer'),
-    'page callback' => 'islandora_book_book_viewer',
-    'type' => MENU_CALLBACK,
-    'access arguments' => array('view fedora collection'),
-  );
-
-  $items['admin/settings/islandora_book'] = array(
-    'title' => 'Islandora Book Admin',
-    'description' => 'Configuration Islandora Book Module',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('islandora_book_admin_settings'),
-    'access arguments' => array('administer site configuration'),
-    'file' => 'islandora_book.admin.inc',
-    'type' => MENU_NORMAL_ITEM,
-  );
-
-  $items['islandora/book/ocr'] = array(
-    'page callback' => 'update_ocr_div',
-    'access arguments' => array('view fedora collection'),
-    'file' => 'islandora_book.admin.inc',
-    'type' => MENU_CALLBACK,
-  );
-
-  $items['islandora/book/updatepage'] = array(
-    'page callback' => 'page_management_wrapper',
-    'access arguments' => array('manage book object'),
-    'file' => 'ObjectManager.inc',
-    'type' => MENU_CALLBACK,
-  );
-
-  $items['islandora/book/upload'] = array(
-    'page callback' => 'upload_pages',
-    'access arguments' => array('manage book object'),
-    'file' => 'pageload/upload_frame.inc',
-    'type' => MENU_CALLBACK,
-  );
-  $items['islandora/book/borndigital'] = array(
-    'page callback' => 'create_borndigital',
-    'access arguments' => array('view fedora collection'),
-    'file' => 'management/born_digital.inc',
-    'type' => MENU_CALLBACK,
-  );
-
-  $items['islandora/book/upload_setup'] = array(
-    'page callback' => 'upload_setup',
-    'access arguments' => array('manage book object'),
-    'file' => 'pageload/upload_frame.inc',
-    'type' => MENU_CALLBACK,
-  );
-  $items['islandora/book/process_file'] = array(
-    'page callback' => 'process_file',
-    'access arguments' => array('view fedora collection'),
-    'file' => 'pageload/upload_frame.inc',
-    'type' => MENU_CALLBACK,
-  );
-  $items['islandora/book/process_page_directory'] = array(
-    'page callback' => 'prep_add_form',
-    'access arguments' => array('view fedora collection'),
-    'file' => 'pageload/prepare_add_pages_form.inc',
-    'type' => MENU_CALLBACK,
-  );
-  $items['islandora/book/delete_book_files'] = array(
-    'page callback' => 'delete_book_page_files',
-    'access arguments' => array('view fedora collection'),
-    'file' => 'pageload/upload_frame.inc',
-    'type' => MENU_CALLBACK,
-  );
-  $items['islandora/page/manage'] = array(
-    'page callback' => 'islandora_book_page_management',
-    'access arguments' => array('manage page object'),
-    'file' => 'page_object_manager.inc',
-    'type' => MENU_CALLBACK,
-  );
-  $items['islandora/book/manage'] = array(
-    'page callback' => 'islandora_book_display_links',
-    'access arguments' => array('manage book object'),
-    'file' => 'management/IslandoraBookDisplayLinks.inc',
-    'type' => MENU_CALLBACK,
-  );
-  $items['islandora/book/management'] = array(
-    'page callback' => 'book_management_wrapper',
-    'access arguments' => array('manage book object'),
-    'file' => 'book_object_manager.inc',
-    'type' => MENU_CALLBACK,
-  );
-
-
-
-
-  return $items;
 }
 
+/**
+ * Implements hook_perm().
+ */
 function islandora_book_perm() {
   return array(
-    'delete pages',
-    'manage book object',
-    'manage page object',
-    'manage deleted books',
+    PERM_ISLANDORA_BOOK_DELETE_PAGE,
+    PERM_ISLANDORA_BOOK_MANAGE_BOOK,
+    PERM_ISLANDORA_BOOK_MANAGE_PAGE,
+    PERM_ISLANDORA_BOOK_MANAGE_DELETED_BOOKS
   );
-}
-
-function islandora_book_solution_pack_form() {
-  module_load_include('inc', 'islandora_book', 'islandora_book.admin');
-  return islandora_book_admin_settings($form_state);
-}
-
-function islandora_book_islandora_tabs($content_models, $pid) {
-  module_load_include('inc', 'islandora_book', 'page_object_manager');
-  module_load_include('inc', 'islandora_book', 'book_object_manager');
-  module_load_include('inc', 'fedora_repository', 'plugins/FedoraObjectDetailedContent');
-  $tabset = array();
-  $content_model = $content_models[0]->pid;
-  if ($content_model == 'islandora:pageCModel' && user_access('manage page object')) {
-    $return_tabs = get_page_model_management_content($pid);
-    $return_tabs['fedora_object_details'] = null;
-    return $return_tabs;
-  }
-
-  if ($content_model == 'islandora:bookCModel' || $content_model == 'islandora:iaBookCModel') {
-  //  $return_tabs = get_book_model_management_content($pid);
-    $return_tabs['fedora_object_details'] = null;
-    return $return_tabs;
-  }
-}
-
-/**
- * Implementation of hook_init
- * (currently disabled)
- */
-function disabled_islandora_book_init() {
-
-  drupal_add_css(drupal_get_path('module', 'islandora_book') . '/css/islandora_book.css');
-}
-
-/**
- * Islandora book book viewer
- * Allows viewing of book object thorugh embedded player
- * @global user $user
- * @param string $pid
- * @return html
- */
-function islandora_book_book_viewer($pid) {
-  global $user;
-  $qs = '';
-  if ($user->uid != 0) {
-    $qs = '?uid=' . base64_encode($user->name . ':' . $user->pass);
-  }
-
-  $viewer_url = variable_get('fedora_base_url', '') . '/get/' . $pid . '/islandora:viewerSdef/getViewer' . $qs;
-  $html = '<iframe src="' . $viewer_url . '" frameborder="0" scrolling="no" style="width: 100%; height: 800px;">Errors: unable to load viewer</iframe>';
-  $fieldset = array(
-    '#title' => t('Viewer - ') . $pid,
-    '#collapsible' => TRUE,
-    '#collapsed' => FALSE,
-    '#value' => $html);
-  drupal_add_css(path_to_theme() . '/header-viewer.css', 'theme');
-  return theme('fieldset', $fieldset);
-}
-
-/**
- * Load an xslt from the main book page uses mods for most of the display.
- * @global user $user
- * @param string $pid
- * @param string $query Default NULL but if supplied then it will execute the query against the book
- */
-function islandora_book_create_book_view($pid, $query = NULL) {
-  global $user;
-  module_load_include('inc', 'fedora_repository', 'api/ObjectHelper');
-  $path = drupal_get_path('module', 'islandora_book');
-  $object_helper = new ObjectHelper;
-  $xml = $object_helper->getStream($pid, 'MODS');
-  $dc_xml = $object_helper->getStream($pid, 'DC');
-  if (!$dc_xml) {
-    drupal_set_message(t('Object does not exist.'), 'error');
-    return '';
-  }
-  $simpleDCxml = simplexml_load_string($dc_xml);
-  $types = $simpleDCxml->xpath('//dc:type');
-  $ingested = 'FALSE';
-  if (!empty($types)) {
-    foreach ($types as $type) {
-      if ($type == 'ingested') {
-        $ingested = 'TRUE';
-      }
-    }
-  }
-
-  if (!isset($pid)) {
-    drupal_set_message(t('Error getting book view, no identifier specified.'));
-    return;
-  }
-  $proc = NULL;
-  try {
-    $proc = new XsltProcessor();
-  } catch (Exception $e) {
-    drupal_set_message(t('Error loading Book View XSLT: @e', array('@e' => check_plain($e->getMessage()))));
-    return;
-  }
-
-  //inject into xsl stylesheet
-  $params = array(
-    'USERID' => $user->uid,
-    'OBJECTSPAGE' => base_path(),
-    'PID' => $pid,
-    'INGESTED' => $ingested,
-    'SOLRFIELD' => variable_get('islandora_book_solr_subject_field', 'mods.subject'),
-  );
-  $proc->setParameter("", $params);
-  $xsl = new DomDocument();
-  $test = $xsl->load($path . '/xsl/book_view.xsl');
-  if (!isset($test)) {
-    drupal_set_message(t('Error loading search results XSLT.'));
-    return t('Error loading search results XSLT.');
-  }
-
-  $input = new DomDocument();
-  $didLoadOk = $input->loadXML($xml);
-  $output = NULL;
-  if (!isset($didLoadOk)) {
-    drupal_set_message(t('Error loading Book View XML.'));
-    return t('Error loading Book View XML.');
-  }
-  else {
-    $xsl = $proc->importStylesheet($xsl);
-    $output = $proc->transformToXML($input);
-  }
-
-  return $output;
-}
-
-/**
- * convert query to a page query
- * @param type $query
- * @param type $pid
- * @return string
- */
-function convert_query_to_page_query($query, $pid) {
-  $newQuery = substr($query, 0, strlen($query) - 23);
-  $pid = str_replace(':', '?', $pid);
-  $newQuery = $newQuery . " AND PID:$pid* AND dc.type:Text";
-  return $newQuery;
-}
-
-/**
- * Custom form element to do our nice images.
- * @return boolean
- */
-function islandora_book_elements() {
-  $type['imagebutton'] = array(
-    '#input' => TRUE,
-    '#button_type' => 'submit',
-    '#executes_submit_callback' => TRUE,
-    '#name' => 'op',
-    '#process' => array('hook_imagebutton_process' => array()),
-  );
-  return $type;
-}
-
-/**
- * theme imagebutton
- * @param type $element
- * @return type
- */
-function theme_imagebutton($element) {
-  return '<input  style="background:url(\'\'); border:0px; width:10px; padding:0px,0px,0px,0px;" type="image" class="form-' . $element['#button_type'] . '" name="' . $element['#name'] . '" id="' . $element['#id'] . '" value="' . check_plain($element['#default_value']) . '" ' . drupal_attributes($element['#attributes']) . ' src="' . $element['#image'] . '" alt="' . $element['#title'] . '" title="' . $element['#title'] . "\" />\n";
 }
 
 /**
  * Implementation of hook_theme().
- *
- * @return type
  */
 function islandora_book_theme() {
   return array(
-    'imagebutton' => array(
-      'arguments' => array('form' => NULL),
-    ),
     'islandora_book_book_search_form' => array(
       'arguments' => array('form' => NULL),
     ),
@@ -330,29 +163,76 @@ function islandora_book_theme() {
 }
 
 /**
- * _islandora_book_viewer_available
- * @return boolean
+ * Implements hook_help().
  */
-function _islandora_book_viewer_available() {
-  $url = parse_url(variable_get('fedora_base_url', 'http://localhost:8080/fedora'));
-  $fedora_host = ("{$url['scheme']}://{$url['host']}" . (!empty($url['port']) ? ":{$url['port']}/" : '/'));
-  $response = drupal_http_request("$fedora_host/iiv/images/loading.gif");
-  return empty($response->error);
+function islandora_book_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#islandora_book':
+      return t('<p>The Islandora Book Module allows users to create digital
+                representations of books within the Fedora Repository. A book
+                object is created using !mods data. A collection of associated
+                page objects may then be created created. Page objects are
+                created by ingesting a zipped folder of TIFF images, each
+                representing a distinct page. Page TIFFs are used to create a
+                series of Fedora datastreams on ingestion.  These streams
+                include derivative images for display - JPEGS, Thumbnails, and
+                JP2s, and one ore more OCR streams for text display and analysis
+                </p>
+                <h3>Configuration</h3>
+                <p>The page datatreams may be created on this server, or on an
+                external processing server with !microservices.<br/> To process
+                images from TIFFS on this server check <strong>Create derivative
+                images locally?</strong> on the admin page. (Link at the bottom
+                of this page).<br/> TO create OCR streams on this server check
+                <strong>Perform OCR on incoming TIFF images?</strong>.<br/><br/>
+                </p>', array(
+                  '!microservices' => l("Fedora Microservices", 'https://github.com/Islandora/fedora_microservices'),
+                  '!mods' => l('MODS', 'http://www.loc.gov/standards/mods/'))
+      );
+  }
 }
 
 /**
- * Implements hook_fedora_repository_required_fedora_objects
- * @return array
+ * Implements hook_islandora_xml_form_builder_form_associations().
  */
-function islandora_book_fedora_repository_required_fedora_objects() {
-  module_load_include('inc', 'fedora_repository', 'fedora_repository.solutionpacks');
-  // Add the form and associate it to the content model
+function islandora_book_islandora_xml_form_builder_form_associations() {
+  return array(
+    'islandora_book_mods_form' => array(
+      'content_model' => 'islandora:bookCModel',
+      'form_name' => 'Islandora Book MODS Form',
+      'dsid' => 'MODS',
+      'title_field' => array('titleInfo', 'title'),
+      'transform' => 'mods_to_dc.xsl',
+      'template' => FALSE,
+    ),
+    'islandora_book_ia_mods_form' => array(
+      'content_model' => 'islandora:iabookCModel',
+      'form_name' => 'Islandora Book MODS Form',
+      'dsid' => 'MODS',
+      'title_field' => array('titleInfo', 'title'),
+      'transform' => 'mods_to_dc.xsl',
+      'template' => FALSE,
+    )
+  );
+}
+
+/**
+ * Implements hook_islandora_xml_form_builder_forms().
+ */
+function islandora_book_islandora_xml_form_builder_forms() {
   $module_path = drupal_get_path('module', 'islandora_book');
-  $form_name = 'Islandora Books MODS Form';
-  $form_xml = file_get_contents("$module_path/xml/mods_book.xml");
-  solution_pack_add_form($form_name, $form_xml);
-  solution_pack_add_form_association('islandora:bookCModel', $form_name);
-  solution_pack_add_form_association('islandora:iaBookCModel', $form_name);
+  return array(
+    'Islandora Book MODS form' => array(
+      'form_file' => "$module_path/xml/mods_books.xml",
+    ),
+  );
+}
+
+/**
+ * Implements hook_islandora_required_objects().
+ */
+function islandora_book_islandora_required_objects() {
+  $module_path = drupal_get_path('module', 'islandora_book');
   return array(
     'islandora_book' => array(
       'module' => 'islandora_book',
@@ -481,153 +361,91 @@ function islandora_book_fedora_repository_required_fedora_objects() {
           ),
         ),
       ),
-    ),
+    )
   );
 }
 
 /**
- * islandora book purge pages form
- * @global string $base_url
- * @param array $form_state
- * @param string $pid
- * @param string $referrer
- * @return array
- */
-function islandora_book_purge_pages_form(&$form_state, $pid, $referrer = NULL) {
-  global $base_url;
-  if (!user_access('purge objects and datastreams')) {
-    return NULL;
-  }
-  if ($pid == NULL) {
-    return NULL;
-  }
-  $form['pid'] = array(
-    '#type' => 'hidden',
-    '#value' => "$pid"
-  );
-  if (!strstr(drupal_get_destination(), urlencode('fedora/repository'))) {
-    $form['referrer'] = array(
-      '#type' => 'hidden',
-      '#value' => $referrer,
-    );
-  }
-  if (!isset($form_state['storage']['confirm'])) {
-    // do your normal $form definition here
-
-
-    $form['submit'] = array(
-      '#type' => 'image_button',
-      '#src' => drupal_get_path('module', 'fedora_repository') . '/images/purge_big.png',
-      '#value' => t('Purge'),
-      '#suffix' => 'Purge all pages associated with this book',
-    );
-
-    return $form;
-  }
-  else {
-    // ALSO do $form definition here. Your final submit handler (after user clicks Yes, I Confirm) will only see $form_state info defined here. Form you create here passed as param1 to confirm_form
-
-    return confirm_form($form, 'Confirm Purge ALL pages?', $referrer, 'Are you sure you want to delete these objects? This action cannot be undone.', 'Purge Pages', 'Cancel'); //Had better luck leaving off last param 'name'
-  }
-  return $form;
-}
-
-/**
- * islandora book purge pages form submit
- * @param array $form
- * @param array $form_state
- */
-function islandora_book_purge_pages_form_submit($form, &$form_state) {
-  module_load_include('inc', 'fedora_repository', 'api/ConnectionHelper');
-  module_load_include('inc', 'islandora_book', 'book_pack_utils');
-  $pid = $form_state['values']['pid'];
-  if (!isset($form_state['storage']['confirm'])) {
-    $form_state['storage']['confirm'] = TRUE; // this will cause the form to be rebuilt, entering the confirm part of the form
-    $form_state['rebuild'] = TRUE; // along with this
-  }
-  else {
-    unset($form_state['storage']['confirm']);
-    $soapHelper = new ConnectionHelper();
-    $client = $soapHelper->getSoapClient(variable_get('fedora_soap_manage_url', 'http://localhost:8080/fedora/wsdl?api=API-M'));
-    $pids_to_delete = get_page_pids($pid);
-    foreach ($pids_to_delete as $pid_to_delete) {
-      $params = array(
-        "pid" => $pid_to_delete,
-        "logMessage" => "Purged",
-        "force" => ""
-      );
-      try {
-
-        $object = $client->__soapCall('purgeObject', array($params));
-        // unset($form_state['storage']['confirm']);
-      } catch (exception $e) {
-        if (preg_match('/org\.fcrepo\.server\.security\.xacml\.pep\.AuthzDeniedException/', $e->getMessage())) {
-          drupal_set_message(t('Error:  Insufficient permissions to purge object.'), 'error');
-        }
-        else {
-          drupal_set_message(t("@message", check_plain($e->getMessage())), 'error');
-        }
-        return;
-      }
-    }
-
-    $form_state['redirect'] = "fedora/repository/$pid";
-  }
-}
-
-/**
- * islandora book help
- * implementaion of hook_help()
- * @param type $path
- * @param type $arg
- * @return type
- */
-function islandora_book_help($path, $arg) {
-  switch ($path) {
-    case 'admin/help#islandora_book':
-      return t(
-          '<p>
-         The Islandora Book Module allows users to create digital representations of books within the Fedora Repository.
-         A book object is created using !mods data. A collection of associated page objects may then be created created. Page objects
-         are created by ingesting a zipped folder of TIFF images, each representing a distinct page.
-         Page TIFFs are used to create a series of Fedora datastreams on ingestion.  These streams include derivative images
-         for display - JPEGS, Thumbnails, and JP2s, and one ore more OCR streams for text display and analysis.
-         </p>
-         <p>
-         <h3>Configuration</h3>
-         The page datatreams may be created on this server, or on an external processing server with !microservices.<br/>
-         To process images from TIFFS on this server check <strong>Create derivative images locally?</strong> on the admin page. (Link at the bottom of this page).<br />
-         TO create OCR streams on this server check <strong>Perform OCR on incoming TIFF images?</strong>. <br /><br />
-
-
-
-        ', array(
-        '!microservices' => l("Fedora Microservices", 'https://github.com/Islandora/fedora_microservices'),
-        '!mods' => l('MODS', 'http://www.loc.gov/standards/mods/'),
-          )
-      );
-  }
-}
-
-/**
- * Implementation of hook_islandora_tabs_alter().
+ * Displays the Internet Archive BookReader.
  *
- * @param &$tabs array
- *   The array of tabs/tabset to alter.
- * @param $params array
- *   An associative array containing the parameters with which the original
- *   hook was called.
- * @see fedora_repository_get_items()
+ * @global user $user
+ *   Used to pass user credentials to fedora.
+ * @param string $object_id
+ *   The identifier of the book object to view.
+ *
+ * @return string
+ *   A fieldset containing the Internet Archive BookReader.
  */
-function islandora_book_islandora_tabs_alter(&$tabs, $params) {
-  //Turn off object details
-  $models = array(
-    'islandora:pageCModel',
-    'islandora:bookCModel',
-    'islandora:iaBookCModel'
+function islandora_book_viewer($object_id) {
+  global $user;
+  $query = ($user->uid != 0) ? '?uid=' . base64_encode($user->name . ':' . $user->pass) : '';
+  $viewer_url = variable_get('islandora_base_url', 'http://localhost:8080/fedora');
+  $viewer_url .= "/get/{$object_id}/islandora:viewerSdef/getViewer{$query}";
+  return theme('fieldset', array(
+      '#title' => t('Viewer - @object_id', array('@object_id' => $object_id)),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+      '#value' => "<iframe src='{$viewer_url}' frameborder='0' scrolling='no' style='width: 100%; height: 800px;'>Errors: unable to load viewer</iframe>"
+    )
   );
+}
 
-  if (in_array($params['content_models'][0]->pid, $models)) {
-    $tabs['fedora_object_details'] = null;
+/**
+ * Load an xslt from the main book page uses mods for most of the display.
+ *
+ * @global user $user
+ * @param FedoraObject $object
+ *   The object to view.
+ * @param string $query
+ *   Default NULL but if supplied then it will execute the query against the book
+ *
+ * @return string
+ *   The view for books.
+ */
+function islandora_book_create_book_view(FedoraObject $object, $query = NULL) {
+  global $user;
+  $xsl = new DOMDocument();
+  $xsl->load(drupal_get_path('module', 'islandora_book') . '/xsl/book_view.xsl');
+  if (isset($object['MODS'])) {
+    $dc = simplexml_load_string($object['DC']->content);
+    $types = $dc->xpath('//dc:type');
+    $proc = new XSLTProcessor();
+    $proc->setParameter('', array(
+        'USERID' => $user->uid,
+        'OBJECTSPAGE' => base_path(),
+        'PID' => $object->id,
+        'INGESTED' => in_array('ingested', $types) ? 'TRUE' : 'FALSE',
+        'SOLRFIELD' => variable_get('islandora_book_solr_subject_field', 'mods.subject'),
+      )
+    );
+    $input = new DOMDocument();
+    if (!$input->loadXML($object['MODS']->content)) {
+      drupal_set_message(t('Error loading Book View XML.'));
+      return t('Error loading Book View XML.');
+    }
+    else {
+      $proc->importStylesheet($xsl);
+      return $proc->transformToXML($input);
+    }
+  }
+}
+
+/**
+ * @todo Make each tab into a seperate menu Path.
+ */
+function islandora_book_islandora_tabs($content_models, $pid) {
+  module_load_include('inc', 'islandora_book', 'page_object_manager');
+  module_load_include('inc', 'islandora_book', 'book_object_manager');
+  module_load_include('inc', 'fedora_repository', 'plugins/FedoraObjectDetailedContent');
+  $tabset = array();
+  $content_model = $content_models[0]->pid;
+  if ($content_model == 'islandora:pageCModel' && user_access(PERM_ISLANDORA_BOOK_MANAGE_PAGE)) {
+    $return_tabs = get_page_model_management_content($pid);
+    $return_tabs['fedora_object_details'] = null;
+    return $return_tabs;
+  }
+  if ($content_model == 'islandora:bookCModel' || $content_model == 'islandora:iaBookCModel') {
+    $return_tabs['fedora_object_details'] = null;
+    return $return_tabs;
   }
 }

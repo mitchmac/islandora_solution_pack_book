@@ -260,7 +260,7 @@ function ibook_create_page_objects($pid, $image_list = array(), $page_cmodel = '
     $page_num++;
   }
   $batch['operations'][] = array('deleteDirectory', array($tmpDir));
-  if (variable_get('islandora_create_book_pdf', FALSE)) {
+  if (variable_get('islandora_book_create_pdf', FALSE)) {
     $batch['operations'][] = array('makePDF', array($pid, $image_list, $tmpDir));
   }
   $batch['operations'][] = array('deleteDirectory', array($tmpDir));
@@ -383,7 +383,7 @@ function ibook_add_single_page_object($book_pid, $page_file, $page_num = 1, $pag
         $page_file = "$page_file.png";
       }
     }
-    $executable = variable_get('islandora_ocr_path', '/usr/bin/tesseract');
+    $executable = variable_get('islandora_book_ocr_path', '/usr/bin/tesseract');
     $returnValue = "";
     $output = "";
     $command = "$executable $page_file $page_file -l $language";

@@ -1297,15 +1297,6 @@
                 </properties>
                 <children/>
             </element>
-            <element name="submit">
-                <properties>
-                    <type>submit</type>
-                    <access>TRUE</access>
-                    <tree>TRUE</tree>
-                    <value>Submit</value>
-                </properties>
-                <children/>
-            </element>
             <element name="module">
                 <properties>
                     <type>hidden</type>

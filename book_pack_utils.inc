@@ -21,7 +21,7 @@ function get_page_pids($book_pid) {
 function refresh_ocr($tiff, &$item, $language, $preprocess = FALSE) {
   $label = $item->objectProfile->objLabel;
   $datastreams = $item->get_datastreams_list_as_array();
-  $executable = variable_get('islandora_ocr_path', '/usr/bin/tesseract');
+  $executable = variable_get('islandora_book_ocr_path', '/usr/bin/tesseract');
   $returnValue = "";
   $output = "";
   $success = FALSE;
