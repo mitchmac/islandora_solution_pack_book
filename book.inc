@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Islandora book
+ *
  */
 
 /**
@@ -11,26 +11,23 @@
 class IslandoraBook {
 
   /**
-   * Constructor
+   * Instantiate
+   *
    * @param string $pid
    */
-  function __construct($pid = '') {
-    module_load_include('inc', 'fedora_repository', 'api/fedora_item');
-    if (!empty($pid)) {
-      $this->pid = $pid;
-      $this->item = new Fedora_Item($pid);
-    }
+  function __construct(FedoraObject $object) {
+    $this->object = $object;
   }
 
   /**
-   * Show field sets
+   * Show field set
+   *
    * @global string $base_url
    * @global user $user
    * @return string
    */
   public function showFieldSets() {
     global $user;
-    global $base_url;
     module_load_include('inc', 'islandora_book', 'book_pack_utils');
     module_load_include('inc', 'islandora_book', 'add_pages');
     module_load_include('module', 'islandora_book');
@@ -39,7 +36,6 @@ class IslandoraBook {
     drupal_add_css($path . '/css/islandora_book.css');
 
     drupal_add_js($path . '/js/book.js?stopcache');
-    global $base_url;
     $show_purge_tab = (!empty($_POST['form_id']) && ($_POST['form_id'] == 'islandora_book_purge_pages_form'));
     $page_number = 1;
     $pages_selected = FALSE;
@@ -53,15 +49,15 @@ class IslandoraBook {
     $class = new CollectionClass();
     $query = <<<XML
 select \$object \$title  from <#ri>
-where \$object <fedora-rels-ext:isMemberOf> <info:fedora/$this->pid>
+where \$object <fedora-rels-ext:isMemberOf> <info:fedora/$this->object->id>
 and \$object <fedora-model:state> <fedora-model:Active>
 and (\$object <info:islandora/islandora-system:def/paged-item-info#sequenceNumber> \$title
 or \$object <http://islandora.ca/ontology/relsext#isSequenceNumber> \$title)
 order by \$title
 XML;
-    $results = $class->getRelatedItems($this->pid, $query);
-    $page_items = $class->renderCollection($results, $this->pid, NULL, NULL, $page_number);
-    $page_pids = get_page_pids($this->pid);
+    $results = $class->getRelatedItems($this->object->id, $query);
+    $page_items = $class->renderCollection($results, $this->object->id, NULL, NULL, $page_number);
+    $page_pids = get_page_pids($this->object->id);
 
     if (count($page_pids) > 0) {
       $hasPage = TRUE;
@@ -80,14 +76,14 @@ XML;
     //ideally we would do module invoke_all and then implement the viewers in a module
     //but two modules for 4 lines of code seems a bit much.
     $sequence_number = (empty($_GET['startpage'])) ? '1' : $_GET['startpage'];
-    $cmodels = $oh->get_content_models_list($this->pid);
+    $cmodels = $oh->get_content_models_list($this->object->id);
     foreach ($cmodels as $cmodel) {
       if ($cmodel->pid == "islandora:iaBookCModel") {
-        $bookviewer = new IslandoraBookviewer($this->pid);
+        $bookviewer = new IslandoraBookviewer($this->object->id);
         $html = $bookviewer->showAjaxBookViewer('mainpage.php', $sequence_number);
       }
       else {
-        $viewer_url = variable_get('fedora_base_url', '') . '/get/' . $this->pid . '/islandora:viewerSdef/getViewer' . $qs;
+        $viewer_url = variable_get('fedora_base_url', '') . '/get/' . $this->object->id . '/islandora:viewerSdef/getViewer' . $qs;
         $html = '<iframe src="' . $viewer_url . '" scrolling="0" frameborder="0" style="width: 100%; height: 800px;">Errors: unable to load viewer</iframe>';
       }
     }
@@ -121,40 +117,23 @@ XML;
     return $tabset;
   }
 
-  function create_book_viewx() {
-    global $base_url;
-    module_load_include('inc', 'fedora_repository', 'api/fedora_item');
-    module_load_include('inc', 'islandora_book', 'book_pack_utils');
-
-    $page_pids = get_sorted_pages($pid);
-    if (count($page_pids) > 0) {
-      $has_pages = TRUE;
-    }
-    $item = new Fedora_Item($this->pid);
-    $img = theme_image("$base_url/fedora/repository/" . $this->pid . "/TN", '', NULL, NULL, FALSE);
-    $links = array();
-    $links[] = l(t('Metadata'), "islandora/page/manage/metadata/$this->pid/");
-    $links[] = l(t('Management'), "islandora/book/management/$this->pid/");
-    $links = array_merge($links, module_invoke_all('islandora_book_get_bookview_links', $this->pid));
-
-    $headers = array($item->objectProfile->objLabel, "");
-    $rows = array(array($img, theme_item_list($links)));
-    return theme_table($headers, $rows);
-  }
-
   function create_book_view() {
     global $base_url;
     module_load_include('inc', 'fedora_repository', 'api/fedora_item');
     module_load_include('inc', 'fedora_repository', 'ObjectDetails');
     $headers = array($item->objectProfile->objLabel, "");
-    $item = new Fedora_Item($this->pid);
-    $img = theme_image("$base_url/fedora/repository/" . $this->pid . "/TN", '', NULL, NULL, FALSE);
+    $item = new Fedora_Item($this->object->id);
+
+    //$id = 'islandora:557';
+    //echo theme_image(array('path' => "islandora/object/{$id}/datastreams/TN/view", 'attributes' => array()));
+
+    $img = theme_image("$base_url/fedora/repository/" . $this->object->id . "/TN", '', NULL, NULL, FALSE);
     $output = "";
     if (user_access('manage book object')) {
       $links = array();
-      $links[] = l(t('Edit Metadata'), "fedora/repository/editmetadata/$this->pid/metadata");
-      $links[] = l(t('Manage Book'), "islandora/book/management/$this->pid/");
-      $links = array_merge($links, module_invoke_all('islandora_book_get_bookview_links', $this->pid));
+      $links[] = l(t('Edit Metadata'), "fedora/repository/editmetadata/$this->object->id/metadata");
+      $links[] = l(t('Manage Book'), "islandora/book/management/$this->object->id/");
+      $links = array_merge($links, module_invoke_all('islandora_book_get_bookview_links', $this->object->id));
       $output .= theme_item_list($links);
     }
 

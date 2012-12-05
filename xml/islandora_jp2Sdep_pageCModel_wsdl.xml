@@ -1,0 +1,55 @@
+<wsdl:definitions name="Fedora Local Djatoka Service" targetNamespace="jp2SDep"
+xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/"
+xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap"
+xmlns:soapenc="http://schemas.xmlsoap.org/wsdl/soap/encoding" xmlns:this="djatoka"
+xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <wsdl:message name="getMetadataRequest">
+    <wsdl:part name="PID" type="xsd:string"/>
+    <wsdl:part name="DSID" type="xsd:string"/>
+    <wsdl:part name="svc_id" type="xsd:string"/>
+  </wsdl:message>
+  <wsdl:message name="getRegionRequest">
+    <wsdl:part name="PID" type="xsd:string"/>
+    <wsdl:part name="DSID" type="xsd:string"/>
+    <wsdl:part name="svc_id" type="xsd:string"/>
+  </wsdl:message>
+  <wsdl:message name="response">
+    <wsdl:part name="exhibit" type="xsd:base64Binary"/>
+  </wsdl:message>
+  <wsdl:portType name="FedoraDjatokaPortType">
+    <wsdl:operation name="getMetadata">
+      <wsdl:input message="this:getMetadataRequest"/>
+      <wsdl:output message="this:response"/>
+    </wsdl:operation>
+    <wsdl:operation name="getRegion">
+      <wsdl:input message="this:getRegionRequest"/>
+      <wsdl:output message="this:response"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:service name="FedoraDjatoka">
+    <wsdl:port binding="this:FedoraDjatoka_http" name="FedoraDjatoka_port">
+      <http:address location="http://local.fedora.server/"/>
+    </wsdl:port>
+  </wsdl:service>
+  <wsdl:binding name="FedoraDjatoka_http" type="this:FedoraDjatokaPortType">
+    <http:binding verb="GET"/>
+    <wsdl:operation name="getMetadata">
+      <http:operation location="adore-djatoka/resolver?url_ver=Z39.88-2004&amp;rft_id=http://local.fedora.server/fedora/get/(PID)/(DSID)&amp;svc_id=(svc_id)"/>
+      <wsdl:input>
+        <http:urlReplacement/>
+      </wsdl:input>
+      <wsdl:output>
+        <mime:content type="application/json"/>
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="getRegion">
+      <http:operation location="adore-djatoka/resolver?url_ver=Z39.88-2004&amp;rft_id=http://local.fedora.server/fedora/get/(PID)/(DSID)&amp;svc_id=(svc_id)&amp;svc_val_fmt=info:ofi/fmt:kev:mtx:jpeg2000&amp;svc.format=(format)&amp;svc.level=(level)&amp;svc.rotate=(rotate)&amp;svc.region=(region)&amp;svc.scale=(scale)&amp;svc.clayers=(clayers)"/>
+      <wsdl:input>
+        <http:urlReplacement/>
+      </wsdl:input>
+      <wsdl:output>
+        <mime:content type="image/jpeg"/>
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+</wsdl:definitions>

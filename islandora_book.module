@@ -137,6 +137,14 @@ function islandora_book_perm() {
  */
 function islandora_book_theme() {
   return array(
+    'islandora_book_book_view' => array(
+      'arguments' => array('object' => NULL),
+      'template' => 'theme/islandora-book-view'
+    ),
+    'islandora_book_page_view' => array(
+      'arguments' => array('object' => NULL),
+      'template' => 'theme/islandora-page-view'
+    ),
     'islandora_book_book_search_form' => array(
       'arguments' => array('form' => NULL),
     ),
@@ -233,18 +241,238 @@ function islandora_book_islandora_xml_form_builder_forms() {
  */
 function islandora_book_islandora_required_objects() {
   $module_path = drupal_get_path('module', 'islandora_book');
+  $connection = islandora_get_tuque_connection();
+  // Page Content Model
+  $page_content_model = $connection->repository->constructObject('islandora:pageCModel');
+  $page_content_model->owner = 'fedoraAdmin';
+  $page_content_model->label = 'Page Content Model';
+  $page_content_model->models = 'fedora-system:ContentModel-3.0';
+  $page_content_model->relationships->add(FEDORA_MODEL_URI, 'hasService', 'info:fedora/islandora:viewerSdef');
+  $page_content_model->relationships->add(FEDORA_MODEL_URI, 'hasService', 'info:fedora/islandora:jp2Sdef');
+  $page_content_model->relationships->add(FEDORA_MODEL_URI, 'hasService', 'info:fedora/islandora:tei2htmlSdef');
+  // DS-COMPOSITE-MODEL Datastream
+  $datastream = $page_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'M');
+  $datastream->label = 'DS-COMPOSITE-MODEL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_pageCModel_ds_composite_model.xml");
+  // Born Digitial Page Content Model
+  $bd_page_content_model = $connection->repository->constructObject('islandora:bd_pageCModel');
+  $bd_page_content_model->owner = 'fedoraAdmin';
+  $bd_page_content_model->label = 'Born Digitial Page Content Model';
+  $bd_page_content_model->models = 'fedora-system:ContentModel-3.0';
+  $bd_page_content_model->relationships->add(FEDORA_MODEL_URI, 'hasService', 'info:fedora/islandora:viewerSdef');
+  $bd_page_content_model->relationships->add(FEDORA_MODEL_URI, 'hasService', 'info:fedora/islandora:jp2Sdef');
+  $bd_page_content_model->relationships->add(FEDORA_MODEL_URI, 'hasService', 'info:fedora/islandora:tei2htmlSdef');
+  // DS-COMPOSITE-MODEL Datastream
+  $datastream = $bd_page_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'M');
+  $datastream->label = 'DS-COMPOSITE-MODEL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_bd_pageCModel_ds_composite_model.xml");
+  // Internet Archive Book Content Model
+  $ia_book_content_model = $connection->repository->constructObject('islandora:iabookCModel');
+  $ia_book_content_model->owner = 'fedoraAdmin';
+  $ia_book_content_model->label = 'Internet Archive Book Content Model';
+  $ia_book_content_model->models = 'fedora-system:ContentModel-3.0';
+  // DS-COMPOSITE-MODEL Datastream
+  $datastream = $ia_book_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'M');
+  $datastream->label = 'DS-COMPOSITE-MODEL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_iabookCModel_ds_composite_model.xml");
+  // Book Content Model
+  $book_content_model = $connection->repository->constructObject('islandora:bookCModel');
+  $book_content_model->owner = 'fedoraAdmin';
+  $book_content_model->label = 'Book Content Model';
+  $book_content_model->models = 'fedora-system:ContentModel-3.0';
+  $book_content_model->relationships->add(FEDORA_MODEL_URI, 'hasService', 'info:fedora/islandora:viewerSdef');
+  // DS-COMPOSITE-MODEL Datastream
+  $datastream = $book_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'M');
+  $datastream->label = 'DS-COMPOSITE-MODEL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_bookCModel_ds_composite_model.xml");
+  // JP2 Service Definition
+  $jp2_service_definition = $connection->repository->constructObject('islandora:jp2Sdef');
+  $jp2_service_definition->owner = 'fedoraAdmin';
+  $jp2_service_definition->label = 'JP2 Service Definition';
+  $jp2_service_definition->models = 'fedora-system:ServiceDefinition-3.0';
+  // METHODMAP Datastream
+  $datastream = $jp2_service_definition->constructDatastream('METHODMAP', 'M');
+  $datastream->label = 'METHODMAP';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_jp2Sdef_methodmap.xml");
+  // JP2 Service Deployment for the Page Content Model
+  $jp2_service_deployment_page = $connection->repository->constructObject('islandora:jp2Sdep-pageCModel');
+  $jp2_service_deployment_page->owner = 'fedoraAdmin';
+  $jp2_service_deployment_page->label = 'Jp2 Service Deployment for the Page Content Model';
+  $jp2_service_deployment_page->models = 'fedora-system:ServiceDeployment-3.0';
+  $jp2_service_deployment_page->relationships->add(FEDORA_MODEL_URI, 'isDeploymentOf', 'info:fedora/islandora:jp2Sdef');
+  $jp2_service_deployment_page->relationships->add(FEDORA_MODEL_URI, 'isContractorOf', 'info:fedora/islandora:pageCModel');
+  $jp2_service_deployment_page->relationships->add(FEDORA_MODEL_URI, 'isContractorOf', 'info:fedora/newspapers:pageCModel');
+  // DSINPUTSPEC Datastream
+  $datastream = $jp2_service_deployment_page->constructDatastream('DSINPUTSPEC', 'M');
+  $datastream->label = 'DSINPUTSPEC';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_jp2Sdep_pageCModel_dsinputspec.xml");
+  // METHODMAP Datastream
+  $datastream = $jp2_service_deployment_page->constructDatastream('METHODMAP', 'M');
+  $datastream->label = 'METHODMAP';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_jp2Sdep_pageCModel_methodmap.xml");
+  // WSDL Datastream
+  $datastream = $jp2_service_deployment_page->constructDatastream('WSDL', 'M');
+  $datastream->label = 'WSDL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_jp2Sdep_pageCModel_wsdl.xml");
+  // Viewer Service Definition
+  $viewer_service_definition = $connection->repository->constructObject('islandora:viewerSdef');
+  $viewer_service_definition->owner = 'fedoraAdmin';
+  $viewer_service_definition->label = 'Viewer Service Definition';
+  $viewer_service_definition->models = 'fedora-system:ServiceDefinition-3.0';
+  // METHODMAP Datastream
+  $datastream = $viewer_service_definition->constructDatastream('METHODMAP', 'M');
+  $datastream->label = 'METHODMAP';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_viewerSdef_methodmap.xml");
+  // Viewer Service Deployment for the Book Content Model
+  $viewer_service_deployment_book = $connection->repository->constructObject('islandora:viewerSdep-bookCModel');
+  $viewer_service_deployment_book->owner = 'fedoraAdmin';
+  $viewer_service_deployment_book->label = 'Viewer Service Deployment for the Book Content Model';
+  $viewer_service_deployment_book->models = 'fedora-system:ServiceDeployment-3.0';
+  $viewer_service_deployment_book->relationships->add(FEDORA_MODEL_URI, 'isDeploymentOf', 'info:fedora/islandora:viewerSdef');
+  $viewer_service_deployment_book->relationships->add(FEDORA_MODEL_URI, 'isContractorOf', 'info:fedora/islandora:bookCModel');
+  // DSINPUTSPEC Datastream
+  $datastream = $viewer_service_deployment_book->constructDatastream('DSINPUTSPEC', 'M');
+  $datastream->label = 'DSINPUTSPEC';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_viewerSdep_bookCModel_dsinputspec.xml");
+  // METHODMAP Datastream
+  $datastream = $viewer_service_deployment_book->constructDatastream('METHODMAP', 'M');
+  $datastream->label = 'METHODMAP';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_viewerSdep_bookCModel_methodmap.xml");
+  // WSDL Datastream
+  $datastream = $viewer_service_deployment_book->constructDatastream('WSDL', 'M');
+  $datastream->label = 'WSDL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_viewerSdep_bookCModel_wsdl.xml");
+  // Viewer Service Deployment for the Page Content Model
+  $viewer_service_deployment_page = $connection->repository->constructObject('islandora:viewerSdep-pageCModel');
+  $viewer_service_deployment_page->owner = 'fedoraAdmin';
+  $viewer_service_deployment_page->label = 'Viewer Service Deployment for the Page Content Model';
+  $viewer_service_deployment_page->models = 'fedora-system:ServiceDeployment-3.0';
+  $viewer_service_deployment_page->relationships->add(FEDORA_MODEL_URI, 'isDeploymentOf', 'info:fedora/islandora:viewerSdef');
+  $viewer_service_deployment_page->relationships->add(FEDORA_MODEL_URI, 'isContractorOf', 'info:fedora/islandora:pageCModel');
+  // DSINPUTSPEC Datastream
+  $datastream = $viewer_service_deployment_page->constructDatastream('DSINPUTSPEC', 'M');
+  $datastream->label = 'DSINPUTSPEC';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_viewerSdep_pageCModel_dsinputspec.xml");
+  // METHODMAP Datastream
+  $datastream = $viewer_service_deployment_page->constructDatastream('METHODMAP', 'M');
+  $datastream->label = 'METHODMAP';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_viewerSdep_pageCModel_methodmap.xml");
+  // WSDL Datastream
+  $datastream = $viewer_service_deployment_page->constructDatastream('WSDL', 'M');
+  $datastream->label = 'WSDL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_viewerSdep_pageCModel_wsdl.xml");
+  // TEI 2 HTML Service Definition
+  $tei2html_service_definition = $connection->repository->constructObject('islandora:tei2htmlSdef');
+  $tei2html_service_definition->owner = 'fedoraAdmin';
+  $tei2html_service_definition->label = 'TEI 2 HTML Service Definition';
+  $tei2html_service_definition->models = 'fedora-system:ServiceDefinition-3.0';
+  // METHODMAP Datastream
+  $datastream = $tei2html_service_definition->constructDatastream('METHODMAP', 'M');
+  $datastream->label = 'METHODMAP';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_tei2htmlSdef_methodmap.xml");
+  // TEI 2 HTML Service Depolyment for the Page Content Model
+  $tei2html_service_deployment_page = $connection->repository->constructObject('islandora:tei2htmlSdep-pageCModel');
+  $tei2html_service_deployment_page->owner = 'fedoraAdmin';
+  $tei2html_service_deployment_page->label = 'TEI 2 HTML Service Deployment for the Page Content Model';
+  $tei2html_service_deployment_page->models = 'fedora-system:ServiceDefinition-3.0';
+  $tei2html_service_deployment_page->relationships->add(FEDORA_MODEL_URI, 'isDeploymentOf', 'info:fedora/islandora:tei2htmlSdef');
+  $tei2html_service_deployment_page->relationships->add(FEDORA_MODEL_URI, 'isContractorOf', 'info:fedora/islandora:pageCModel');
+  // DSINPUTSPEC Datastream
+  $datastream = $tei2html_service_deployment_page->constructDatastream('DSINPUTSPEC', 'M');
+  $datastream->label = 'DSINPUTSPEC';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_tei2htmlSdep_pageCModel_dsinputspec.xml");
+  // METHODMAP Datastream
+  $datastream = $tei2html_service_deployment_page->constructDatastream('METHODMAP', 'M');
+  $datastream->label = 'METHODMAP';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_tei2htmlSdep_pageCModel_methodmap.xml");
+  // WSDL Datastream
+  $datastream = $tei2html_service_deployment_page->constructDatastream('WSDL', 'M');
+  $datastream->label = 'WSDL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_tei2htmlSdep_pageCModel_wsdl.xml");
+  // XSL Datastream
+  $datastream = $tei2html_service_deployment_page->constructDatastream('XSL', 'M');
+  $datastream->label = 'XSL';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_tei2htmlSdep_pageCModel_xsl.xml");
+  // Book Collection
+  $book_collection = $connection->repository->constructObject('islandora:bookCollection');
+  $book_collection->owner = 'fedoraAdmin';
+  $book_collection->label = 'Book Collection';
+  $book_collection->models = 'islandora:collectionCModel';
+  $book_collection->relationships->add(FEDORA_RELS_EXT_URI, 'isMemberOfCollection', 'info:fedora/islandora:root');
+  // Collection Policy Datastream
+  $datastream = $book_collection->constructDatastream('COLLECTION_POLICY', 'M');
+  $datastream->label = 'COLLECTION_POLICY';
+  $datastream->mimetype = 'text/xml';
+  $datastream->setContentFromFile("$module_path/xml/islandora_book_collection_policy.xml");
+  // TN Datastream
+  $datastream = $book_collection->constructDatastream('TN', 'M');
+  $datastream->label = 'TN';
+  $datastream->mimetype = 'image/png';
+  $datastream->setContentFromFile("$module_path/images/folder.png");
+
+
+
   return array(
-    'islandora_book' => array(
-      'module' => 'islandora_book',
+    'islandora_book'=> array(
       'title' => 'Islandora Books',
       'objects' => array(
+        $page_content_model,
+        // $bd_page_content_model,
+        $ia_book_content_model,
+        //$book_content_model,
+        //$jp2_service_definition,
+        //$jp2_service_deployment_page,
+        //$viewer_service_definition,
+        //$viewer_service_deployment_book,
+        //$viewer_service_deployment_page,
+        //$tei2html_service_definition,
+        //$tei2html_service_deployment_page,
+        $book_collection
+      )
+    )
+  );
+
+  return array(
+    'islandora_book' => array(
+      'title' => 'Islandora Books',
+      // Page C MODEL
+      'objects' => array(
         array(
-          'foxml_file' => "$module_path/xml/islandora_pageCModel.xml",
           'pid' => 'islandora:pageCModel',
-          'dsid' => NULL,
-          'datastream_file' => NULL,
-          'dsversion' => NULL,
+          'label' => 'Page Content Model',
+          'cmodel' => 'fedora-system:ContentModel-3.0',
+          'datastreams' => array(
+            array(
+              'dsid' => 'ISLANDORACM',
+              'label' => 'Islandora content model',
+              'mimetype' => 'text/xml',
+              'control_group' => 'X',
+              'datastream_file' => "$module_path/xml/islandora_sp_large_image_cmodel.xml",
+
+            )
+          ),
         ),
+        // BD Page CModel
         array(
           'foxml_file' => "$module_path/xml/islandora_bd_pageCModel.xml",
           'pid' => 'islandora:bd_pageCModel',
@@ -252,6 +480,7 @@ function islandora_book_islandora_required_objects() {
           'datastream_file' => NULL,
           'dsversion' => NULL,
         ),
+        // ia book c model
         array(
           'foxml_file' => "$module_path/xml/islandora_iaBookCModel.xml",
           'pid' => 'islandora:iaBookCModel',
@@ -259,6 +488,7 @@ function islandora_book_islandora_required_objects() {
           'datastream_file' => NULL,
           'dsversion' => NULL,
         ),
+        // book c model
         array(
           'foxml_file' => "$module_path/xml/islandora_bookCModel.xml",
           'pid' => 'islandora:bookCModel',
@@ -266,6 +496,7 @@ function islandora_book_islandora_required_objects() {
           'datastream_file' => NULL,
           'dsversion' => NULL,
         ),
+        // jp2sdef
         array(
           'foxml_file' => "$module_path/xml/islandora_jp2Sdef.xml",
           'pid' => 'islandora:jp2Sdef',
@@ -273,69 +504,7 @@ function islandora_book_islandora_required_objects() {
           'datastream_file' => NULL,
           'dsversion' => NULL,
         ),
-        array(
-          'foxml_file' => "$module_path/xml/islandora_viewerSdef.xml",
-          'pid' => 'islandora:viewerSdef',
-          'dsid' => NULL,
-          'datastream_file' => NULL,
-          'dsversion' => NULL,
-        ),
-        array(
-          'foxml_file' => "$module_path/xml/islandora_viewerSdep-bookCModel.xml",
-          'pid' => 'islandora:viewerSdep-bookCModel',
-          'dsid' => NULL,
-          'datastream_file' => NULL,
-          'dsversion' => NULL,
-        ),
-        array(
-          'foxml_file' => "$module_path/xml/islandora_viewerSdep-pageCModel.xml",
-          'pid' => 'islandora:viewerSdep-pageCModel',
-          'dsid' => NULL,
-          'datastream_file' => NULL,
-          'dsversion' => NULL,
-        ),
-        array(
-          'foxml_file' => "$module_path/xml/islandora_tei2htmlSdef.xml",
-          'pid' => 'islandora:tei2htmlSdef',
-          'dsid' => NULL,
-          'datastream_file' => NULL,
-          'dsversion' => NULL,
-        ),
-        array(
-          'foxml_file' => "$module_path/xml/islandora_tei2htmlSdep-pageCModel.xml",
-          'pid' => 'islandora:tei2htmlSdep-pageCModel',
-          'dsid' => NULL,
-          'datastream_file' => NULL,
-          'dsversion' => NULL,
-        ),
-        array(
-          'foxml_file' => "$module_path/xml/islandora_book_collection.xml",
-          'pid' => 'islandora:collection',
-          'dsid' => NULL,
-          'datastream_file' => NULL,
-          'dsversion' => NULL,
-        ),
-        array(
-          'foxml_file' => "$module_path/xml/islandora_organization-entityCModel.xml",
-          'pid' => 'islandora:organization-entityCModel',
-          'dsid' => NULL,
-          'datastream_file' => NULL,
-          'dsversion' => NULL,
-        ),
-        array(
-          'foxml_file' => "$module_path/xml/islandora_place-entityCModel.xml",
-          'pid' => 'islandora:place-entityCModel',
-          'dsid' => NULL,
-          'datastream_file' => NULL,
-          'dsversion' => NULL,
-        ),
-        array(
-          'foxml_file' => "$module_path/xml/islandora_person-entityCModel.xml",
-          'pid' => 'islandora:person-entityCModel',
-          'dsid' => NULL,
-          'datastream_file' => NULL,
-          'dsversion' => NULL,
-        ),
+        // jp2sdep
         array(
           'foxml_file' => "$module_path/xml/islandora_jp2Sdep-pageCModel.xml",
           'pid' => 'islandora:jp2Sdep-pageCModel',
@@ -343,6 +512,71 @@ function islandora_book_islandora_required_objects() {
           'datastream_file' => NULL,
           'dsversion' => NULL,
         ),
+        // viewerddef
+        array(
+          'foxml_file' => "$module_path/xml/islandora_viewerSdef.xml",
+          'pid' => 'islandora:viewerSdef',
+          'dsid' => NULL,
+          'datastream_file' => NULL,
+          'dsversion' => NULL,
+        ),
+        // viewersdep
+        array(
+          'foxml_file' => "$module_path/xml/islandora_viewerSdep-bookCModel.xml",
+          'pid' => 'islandora:viewerSdep-bookCModel',
+          'dsid' => NULL,
+          'datastream_file' => NULL,
+          'dsversion' => NULL,
+        ),
+        // viewerdep
+        array(
+          'foxml_file' => "$module_path/xml/islandora_viewerSdep-pageCModel.xml",
+          'pid' => 'islandora:viewerSdep-pageCModel',
+          'dsid' => NULL,
+          'datastream_file' => NULL,
+          'dsversion' => NULL,
+        ),
+        // teihtmlsdef
+        array(
+          'foxml_file' => "$module_path/xml/islandora_tei2htmlSdef.xml",
+          'pid' => 'islandora:tei2htmlSdef',
+          'dsid' => NULL,
+          'datastream_file' => NULL,
+          'dsversion' => NULL,
+        ),
+        // teihtmldep page
+        array(
+          'foxml_file' => "$module_path/xml/islandora_tei2htmlSdep-pageCModel.xml",
+          'pid' => 'islandora:tei2htmlSdep-pageCModel',
+          'dsid' => NULL,
+          'datastream_file' => NULL,
+          'dsversion' => NULL,
+        ),
+        // org entity
+        array(
+          'foxml_file' => "$module_path/xml/islandora_organization-entityCModel.xml",
+          'pid' => 'islandora:organization-entityCModel',
+          'dsid' => NULL,
+          'datastream_file' => NULL,
+          'dsversion' => NULL,
+        ),
+        // place entity
+        array(
+          'foxml_file' => "$module_path/xml/islandora_place-entityCModel.xml",
+          'pid' => 'islandora:place-entityCModel',
+          'dsid' => NULL,
+          'datastream_file' => NULL,
+          'dsversion' => NULL,
+        ),
+        // person entity
+        array(
+          'foxml_file' => "$module_path/xml/islandora_person-entityCModel.xml",
+          'pid' => 'islandora:person-entityCModel',
+          'dsid' => NULL,
+          'datastream_file' => NULL,
+          'dsversion' => NULL,
+        ),
+        // book collection
         array(
           'pid' => 'islandora:bookCollection',
           'label' => 'Book Collection',
@@ -364,6 +598,31 @@ function islandora_book_islandora_required_objects() {
     )
   );
 }
+
+/**
+ * Implements hook_CMODEL_PID_islandora_view_object().
+ */
+function islandora_book_islandora_iabookcmodel_islandora_view_object($object, $page_number, $page_size) {
+  $output = theme('islandora_book_book_view', array('object' => $object));
+  return array('' => $output);
+}
+
+/**
+  * Implements hook_CMODEL_PID_islandora_view_object().
+ */
+function islandora_book_islandora_bookcmodel_islandora_view_object($object, $page_number, $page_size) {
+  $output = theme('islandora_book_book_view', array('object' => $object));
+  return array('' => $output);
+}
+
+/**
+ * Implements hook_CMODEL_PID_islandora_view_object().
+ */
+function islandora_book_islandora_pagecmodel_islandora_view_object($object, $page_number, $page_size) {
+  $output = theme('islandora_book_page_view', array('object' => $object));
+  return array('' => $output);
+}
+
 
 /**
  * Displays the Internet Archive BookReader.

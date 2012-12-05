@@ -1,0 +1,3 @@
+<fmm:MethodMap name="methodmap" xmlns:fmm="http://fedora.comm.nsdlib.org/service/methodmap">
+  <fmm:Method operationName="tei2html"/>
+</fmm:MethodMap>

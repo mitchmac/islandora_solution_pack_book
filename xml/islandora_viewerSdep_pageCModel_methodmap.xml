@@ -1,0 +1,9 @@
+<fmm:MethodMap name="methodmap" xmlns:fmm="http://fedora.comm.nsdlib.org/service/methodmap">
+  <fmm:Method operationName="getViewer" wsdlMsgName="getViewerRequestMsg" wsdlMsgOutput="getViewerResponseMsg">
+    <fmm:DefaultInputParm defaultValue="$PID" label="fedora object pid" parmName="PID" passBy="VALUE" required="true"/>
+    <fmm:DefaultInputParm defaultValue="islandora:pageCModel" label="content model" parmName="CMODEL" passBy="VALUE" required="true"/>
+    <fmm:DefaultInputParm defaultValue="JP2" label="content model" parmName="DSID" passBy="VALUE" required="true"/>
+    <fmm:UserInputParm defaultValue="" parmName="uid" passBy="VALUE" required="false"/>
+    <fmm:MethodReturnType wsdlMsgName="getViewerResponseMsg" wsdlMsgTOMIME="text/html"/>
+  </fmm:Method>
+</fmm:MethodMap>

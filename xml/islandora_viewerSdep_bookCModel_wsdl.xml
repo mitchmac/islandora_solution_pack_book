@@ -1,0 +1,38 @@
+<wsdl:definitions name="viewerSdep" targetNamespace="viewerSdep"
+xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/"
+xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap"
+xmlns:soapenc="http://schemas.xmlsoap.org/wsdl/soap/encoding" xmlns:this="viewerSdep"
+xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <wsdl:message name="getViewerRequestMsg">
+    <wsdl:part name="PID" type="xsd:string"/>
+    <wsdl:part name="CMODEL" type="xsd:string"/>
+    <wsdl:part name="DSID" type="xsd:string"/>
+    <wsdl:part name="uid" type="xsd:string"/>
+  </wsdl:message>
+  <wsdl:message name="getViewerResponseMsg">
+    <wsdl:part name="RESPONSE" type="xsd:string"/>
+  </wsdl:message>
+  <wsdl:portType name="viewer_portType">
+    <wsdl:operation name="getViewer">
+      <wsdl:input message="this:getViewerRequestMsg"/>
+      <wsdl:output message="this:getViewerResponseMsg"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:service name="viewer_service">
+    <wsdl:port binding="this:viewer_binding" name="viewer_port">
+      <http:address location="http://local.fedora.server/iiv/viewer.jsp"/>
+    </wsdl:port>
+  </wsdl:service>
+  <wsdl:binding name="viewer_binding" type="this:viewer_portType">
+    <http:binding verb="GET"/>
+    <wsdl:operation name="getViewer">
+      <http:operation location="?pid=(PID)&amp;cmodel=(CMODEL)&amp;dsid=(DSID)&amp;uid=(uid)"/>
+      <wsdl:input>
+        <http:urlReplacement/>
+      </wsdl:input>
+      <wsdl:output>
+        <mime:content type="text/html"/>
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+</wsdl:definitions>

@@ -19,9 +19,8 @@
  */
 function islandora_book_admin_settings_form(array $form, array &$form_state) {
   module_load_include('inc', 'islandora_book', 'book_pack_utils');
-  $values = isset($form_state['values']) ? $form_state['values'] : NULL;
-  $get_default_value = function($name, $default) use($values) {
-    return isset($values[$name]) ? $values[$name] : variable_get($name, $default);
+  $get_default_value = function($name, $default) use($form_state) {
+    return isset($form_state['values'][$name]) ? $form_state['values'][$name] : variable_get($name, $default);
   };
   $do_ocr = $get_default_value('islandora_book_do_ocr', TRUE);
   $ocr_path = $get_default_value('islandora_book_ocr_path', '/usr/bin/tesseract');

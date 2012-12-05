@@ -1,0 +1,8 @@
+<fmm:MethodMap name="methodmap" xmlns:fmm="http://fedora.comm.nsdlib.org/service/methodmap">
+  <fmm:Method operationName="tei2html" wsdlMsgName="tei2htmlRequestMsg" wsdlMsgOutput="response">
+    <fmm:DatastreamInputParm parmName="TEI" passBy="URL_REF" required="true"/>
+    <fmm:DatastreamInputParm parmName="XSL" passBy="URL_REF" required="true"/>
+    <fmm:UserInputParm defaultValue="" parmName="uid" passBy="VALUE" required="false"/>
+    <fmm:MethodReturnType wsdlMsgName="response" wsdlMsgTOMIME="text/html"/>
+  </fmm:Method>
+</fmm:MethodMap>
