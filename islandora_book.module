@@ -312,7 +312,7 @@ function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
  */
 function islandora_book_islandora_iabookcmodel_islandora_view_object($object, $page_number, $page_size) {
   $output = theme('islandora_book_book_view', array('object' => $object));
-  return array('' => $output);
+  return array('islandora_book' => $output);
 }
 
 /**

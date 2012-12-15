@@ -91,6 +91,8 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
       )
     )
   );
+  module_load_include('inc', 'islandora', 'includes/solution_packs');
+  $form += islandora_viewers_form('islandora_book_viewers', 'image/jp2');
   return system_settings_form($form);
 }
 
