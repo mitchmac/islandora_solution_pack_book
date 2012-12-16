@@ -9,7 +9,7 @@
  */
 
 // Permissions
-define('PERM_ISLANDORA_BOOK_DELETE_PAGE', 'delete pages');
+define('PERM_ISLANDORA_BOOK_DELETE_PAGES', 'delete pages');
 define('PERM_ISLANDORA_BOOK_MANAGE_BOOK', 'manage book object');
 define('PERM_ISLANDORA_BOOK_MANAGE_PAGE', 'manage page object');
 define('PERM_ISLANDORA_BOOK_MANAGE_DELETED_BOOKS', 'manage deleted books');
@@ -36,6 +36,15 @@ function islandora_book_menu() {
       'access callback' => 'islandora_object_access_callback',
       'access arguments' => array(FEDORA_VIEW, 2),
       'file' => 'includes/pages.menu.inc',
+    ),
+    'islandora/object/%islandora_object/manage/book' => array(
+      'title' => 'Book',
+      'type' => MENU_LOCAL_TASK,
+      'page callback' => 'islandora_book_manage_menu',
+      'page arguments' => array(2),
+      'access callback' => 'islandora_book_manage_access_callback',
+      'access arguments' => array(2),
+      'file' => 'includes/manage.menu.inc',
     )
   );
     /*
@@ -116,12 +125,38 @@ function islandora_book_menu() {
  */
 function islandora_book_perm() {
   return array(
-    PERM_ISLANDORA_BOOK_DELETE_PAGE,
+    PERM_ISLANDORA_BOOK_DELETE_PAGES,
     PERM_ISLANDORA_BOOK_MANAGE_BOOK,
     PERM_ISLANDORA_BOOK_MANAGE_PAGE,
     PERM_ISLANDORA_BOOK_MANAGE_DELETED_BOOKS
   );
 }
+
+/**
+ * Determine whether or not to show this modules manage tab.
+ *
+ * @param FedoraObject $fedora_object
+ *   The object being managed.
+ *
+ * @return boolean
+ *   TRUE if it should be shown, and FALSE if it should not be shown.
+ */
+function islandora_book_manage_access_callback($object = NULL) {
+  if (!isset($object)) {
+    return FALSE;
+  }
+  $manage_actions = array(
+    PERM_ISLANDORA_BOOK_DELETE_PAGES,
+    PERM_ISLANDORA_BOOK_MANAGE_BOOK,
+    PERM_ISLANDORA_BOOK_MANAGE_PAGE,
+    PERM_ISLANDORA_BOOK_MANAGE_DELETED_BOOKS
+  );
+  $manage_actions_access = array_map('user_access', $manage_actions);
+  $can_perform_a_action = array_sum($manage_actions_access) > 0;
+  $is_book = in_array('islandora:iaBookCModel', $object->models);
+  return $is_book && $can_perform_a_action && islandora_object_access_callback(FEDORA_MANAGE, $object);
+}
+
 
 /**
  * Implementation of hook_theme().
