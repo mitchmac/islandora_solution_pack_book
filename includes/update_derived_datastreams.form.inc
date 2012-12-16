@@ -27,6 +27,8 @@ function islandora_book_update_derived_datastreams_form(array $form, array &$for
     return isset($form_state['values'][$field]) ? $form_state['values'][$field] : $default;
   };
   $form_state['object'] = $object;
+  $languages = array_filter(variable_get('islandora_book_ocr_languages'));
+  $languages = array_intersect_key(islandora_book_get_tesseract_langauges(), $languages);
   return array(
     'images' => array(
       '#type' => 'checkbox',
@@ -47,8 +49,8 @@ function islandora_book_update_derived_datastreams_form(array $form, array &$for
     'language' => array(
       '#type' => 'select',
       '#title' => t('Language'),
-      '#options' => islandora_book_get_tesseract_langauges(),
-      '#default_value' => $default_value('language', 'eng')
+      '#options' => $languages,
+      '#default_value' => $default_value('language', NULL)
     ),
     'submit' => array(
       '#type' => 'submit',

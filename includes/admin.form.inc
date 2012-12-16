@@ -18,7 +18,7 @@
  *   The Drupal form definition.
  */
 function islandora_book_admin_settings_form(array $form, array &$form_state) {
-  module_load_include('inc', 'islandora_book', 'book_pack_utils');
+  module_load_include('inc', 'islandora_book', 'includes/utilities');
   $get_default_value = function($name, $default) use($form_state) {
     return isset($form_state['values'][$name]) ? $form_state['values'][$name] : variable_get($name, $default);
   };
@@ -26,6 +26,7 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
   $ocr_path = $get_default_value('islandora_book_ocr_path', '/usr/bin/tesseract');
   $ocr_availible_message = islandora_book_admin_settings_form_ocr_availible_message($ocr_path);
   $solr_enabled = module_exists('islandora_solr');
+  $ocr_languages = islandora_book_get_tesseract_langauges();
   $form = array(
     'islandora_book_solr_subject_field' => array(
       '#access' => $solr_enabled,
@@ -68,13 +69,13 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
         'islandora_book_ocr_languages' => array(
           '#type' => 'checkboxes',
           '#title' => t('Languages available for OCR'),
-          '#options' => islandora_book_get_tesseract_langauges(),
+          '#options' => $ocr_languages,
           '#description' => t('Select from the language packs available on your
                              processing server.<br/> These are normally found in
                              <strong>/usr/local/share/tessdata/</strong><br/>
                              Check with your systems admininistrator if you are
                              unsure of availablilty'),
-          '#default_value' => islandora_book_get_available_tesseract_languages(),
+          '#default_value' => array_filter($get_default_value('islandora_book_ocr_languages', $ocr_languages)),
         ),
         'islandora_book_ocr_path' => array(
           '#type' => 'textfield',
@@ -95,6 +96,13 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
   );
   module_load_include('inc', 'islandora', 'includes/solution_packs');
   $form += islandora_viewers_form('islandora_book_viewers', NULL, 'islandora:iaBookCModel');
+  $form['book_viewers'] = $form['viewers'];
+  $form['book_viewers']['#title'] = t('Book Viewers');
+  unset($form['viewers']);
+  $form += islandora_viewers_form('islandora_book_page_viewers', 'image/jp2');
+  $form['page_viewers'] = $form['viewers'];
+  $form['page_viewers']['#title'] = t('Page Viewers');
+  unset($form['viewers']);
   return system_settings_form($form);
 }
 

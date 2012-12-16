@@ -26,6 +26,21 @@ function islandora_book_preprocess_islandora_book_book(array &$variables) {
 /**
  * Implements hook_preprocess_theme().
  */
+function islandora_book_preprocess_islandora_book_page(array &$variables) {
+  module_load_include('inc', 'islandora', 'includes/solution_packs');
+  $object = $variables['object'];
+  $results = $object->relationships->get(FEDORA_RELS_EXT_URI, 'isMemberOf');
+  $variables['book_object_id'] = $results[0]['object']['value'];
+  $jp2_url = url("islandora/object/{$object->id}/datastream/JP2/view", array('absolute' => TRUE));
+  $viewer = islandora_get_viewer($jp2_url, 'islandora_book_page_viewers');
+  if ($viewer) {
+    $variables['viewer'] = $viewer;
+  }
+}
+
+/**
+ * Implements hook_preprocess_theme().
+ */
 function islandora_book_preprocess_islandora_book_pages(array &$variables) {
   module_load_include('inc', 'islandora_book', 'includes/utilities');
   $object = $variables['object'];
