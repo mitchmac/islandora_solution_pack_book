@@ -25,16 +25,20 @@ function islandora_book_menu() {
       'page callback' => 'drupal_get_form',
       'page arguments' => array('islandora_book_admin_settings_form'),
       'access arguments' => array('administer site configuration'),
-      'file' => 'islandora_book.admin.inc',
+      'file' => 'includes/admin.form.inc',
       'type' => MENU_NORMAL_ITEM,
     ),
-    'fedora/book/%islandora_object/%' => array(
-      'title' => t('Book view'),
-      'page callback' => 'islandora_book_create_book_view',
-      'page arguments' => array(2, 3),
-      'access arguments' => array(FEDORA_VIEW),
-      'type' => MENU_CALLBACK,
-    ),
+    'islandora/object/%islandora_object/pages' => array(
+      'title' => 'Pages',
+      'type' => MENU_LOCAL_TASK,
+      'page callback' => 'islandora_book_pages_menu',
+      'page arguments' => array(2),
+      'access callback' => 'islandora_object_access_callback',
+      'access arguments' => array(FEDORA_VIEW, 2),
+      'file' => 'includes/pages.menu.inc',
+    )
+  );
+    /*
     'restore/books' => array(
       'title' => t('Deleted Books'),
       'file' => 'management/book_undelete.inc',
@@ -42,18 +46,6 @@ function islandora_book_menu() {
       'page arguments' => array('book_undelete_form'),
       'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_DELETED_BOOKS),
       'type' => MENU_NORMAL_ITEM,
-    ),
-    'fedora/book_viewer' => array(
-      'title' => t('Book viewer'),
-      'page callback' => 'islandora_book_viewer',
-      'access arguments' => array(FEDORA_VIEW),
-      'type' => MENU_CALLBACK,
-    ),
-    'islandora/book/ocr' => array(
-      'page callback' => 'update_ocr_div',
-      'access arguments' => array(FEDORA_VIEW),
-      'file' => 'islandora_book.admin.inc',
-      'type' => MENU_CALLBACK,
     ),
     'islandora/book/updatepage' => array(
       'page callback' => 'page_management_wrapper',
@@ -114,8 +106,9 @@ function islandora_book_menu() {
       'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_BOOK),
       'file' => 'book_object_manager.inc',
       'type' => MENU_CALLBACK,
-    )
+      )
   );
+*/
 }
 
 /**
@@ -135,22 +128,33 @@ function islandora_book_perm() {
  */
 function islandora_book_theme() {
   return array(
-    'islandora_book_book_view' => array(
+    'islandora_book_book' => array(
       'arguments' => array('object' => NULL),
       'file' => 'theme/islandora_book.theme.inc',
-      'template' => 'theme/islandora-book-view'
+      'template' => 'theme/islandora-book'
     ),
-    'islandora_book_page_view' => array(
+    'islandora_book_page' => array(
       'arguments' => array('object' => NULL),
-      'template' => 'theme/islandora-page-view'
+      'file' => 'theme/islandora_book.theme.inc',
+      'template' => 'theme/islandora-page'
     ),
-    'islandora_book_book_search_form' => array(
-      'arguments' => array('form' => NULL),
+    'islandora_book_pages' => array(
+      'arguments' => array('object' => NULL),
+      'file' => 'theme/islandora_book.theme.inc',
+      'template' => 'theme/islandora-pages'
     ),
-    'islandora_book_simple_book_search_form' => array(
-      'arguments' => array('form' => NULL),
+    'islandora_book_pages_grid' => array(
+      'arguments' => array('object' => NULL),
+      'file' => 'theme/islandora_book.theme.inc',
+      'template' => 'theme/islandora-pages-grid'
     ),
-    'islandora_book_page_table' => array(
+    'islandora_book_pages_list' => array(
+      'arguments' => array('object' => NULL),
+      'file' => 'theme/islandora_book.theme.inc',
+      'template' => 'theme/islandora-pages-list'
+    ),
+    /*
+      'islandora_book_page_table' => array(
       'arguments' => array('element' => NULL),
       'file' => 'management/IslandoraBookPageTable.inc',
     ),
@@ -165,7 +169,7 @@ function islandora_book_theme() {
     'islandora_file_reorder_table' => array(
       'arguments' => array('element' => NULL),
       'file' => 'management/IslandoraFileReorderTable.inc',
-    )
+      )*/
   );
 }
 
@@ -230,7 +234,10 @@ function islandora_book_islandora_xml_form_builder_forms() {
   $module_path = drupal_get_path('module', 'islandora_book');
   return array(
     'Islandora Book MODS form' => array(
-      'form_file' => "$module_path/xml/mods_books.xml",
+      'form_file' => "$module_path/data/forms/book_mods_form.xml",
+    ),
+    'Islandora Book Page MODS form' => array(
+      'form_file' => "$module_path/data/forms/page_mods_form.xml",
     ),
   );
 }
@@ -265,18 +272,6 @@ function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
   $datastream->mimetype = 'text/xml';
   $datastream->setContentFromFile("$module_path/xml/islandora_iabookCModel_ds_composite_model.xml", FALSE);
   $ia_book_content_model->ingestDatastream($datastream);
-  // Book Content Model
-  $book_content_model = $connection->repository->constructObject('islandora:bookCModel');
-  $book_content_model->owner = 'fedoraAdmin';
-  $book_content_model->label = 'Islandora Book Content Model';
-  $book_content_model->models = 'fedora-system:ContentModel-3.0';
-  $book_content_model->relationships->add(FEDORA_MODEL_URI, 'hasService', 'islandora:viewerSdef');
-  // DS-COMPOSITE-MODEL Datastream
-  $datastream = $book_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'M');
-  $datastream->label = 'DS-COMPOSITE-MODEL';
-  $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/islandora_bookCModel_ds_composite_model.xml", FALSE);
-  $book_content_model->ingestDatastream($datastream);
   // Book Collection
   $book_collection = $connection->repository->constructObject('islandora:bookCollection');
   $book_collection->owner = 'fedoraAdmin';
@@ -301,7 +296,6 @@ function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
       'objects' => array(
         $page_content_model,
         $ia_book_content_model,
-        $book_content_model,
         $book_collection
       )
     )
@@ -311,25 +305,17 @@ function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
 /**
  * Implements hook_CMODEL_PID_islandora_view_object().
  */
-function islandora_book_islandora_iabookcmodel_islandora_view_object($object, $page_number, $page_size) {
-  $output = theme('islandora_book_book_view', array('object' => $object));
+function islandora_book_islandora_iabookcmodel_islandora_view_object($object) {
+  $output = theme('islandora_book_book', array('object' => $object));
   return array('islandora_book' => $output);
-}
-
-/**
-  * Implements hook_CMODEL_PID_islandora_view_object().
- */
-function islandora_book_islandora_bookcmodel_islandora_view_object($object, $page_number, $page_size) {
-  $output = theme('islandora_book_book_view', array('object' => $object));
-  return array('' => $output);
 }
 
 /**
  * Implements hook_CMODEL_PID_islandora_view_object().
  */
 function islandora_book_islandora_pagecmodel_islandora_view_object($object, $page_number, $page_size) {
-  $output = theme('islandora_book_page_view', array('object' => $object));
-  return array('' => $output);
+  $output = theme('islandora_book_page', array('object' => $object));
+  return array('islandora_book' => $output);
 }
 
 
@@ -356,46 +342,6 @@ function islandora_book_viewer($object_id) {
       '#value' => "<iframe src='{$viewer_url}' frameborder='0' scrolling='no' style='width: 100%; height: 800px;'>Errors: unable to load viewer</iframe>"
     )
   );
-}
-
-/**
- * Load an xslt from the main book page uses mods for most of the display.
- *
- * @global user $user
- * @param FedoraObject $object
- *   The object to view.
- * @param string $query
- *   Default NULL but if supplied then it will execute the query against the book
- *
- * @return string
- *   The view for books.
- */
-function islandora_book_create_book_view(FedoraObject $object, $query = NULL) {
-  global $user;
-  $xsl = new DOMDocument();
-  $xsl->load(drupal_get_path('module', 'islandora_book') . '/xsl/book_view.xsl');
-  if (isset($object['MODS'])) {
-    $dc = simplexml_load_string($object['DC']->content);
-    $types = $dc->xpath('//dc:type');
-    $proc = new XSLTProcessor();
-    $proc->setParameter('', array(
-        'USERID' => $user->uid,
-        'OBJECTSPAGE' => base_path(),
-        'PID' => $object->id,
-        'INGESTED' => in_array('ingested', $types) ? 'TRUE' : 'FALSE',
-        'SOLRFIELD' => variable_get('islandora_book_solr_subject_field', 'mods.subject'),
-      )
-    );
-    $input = new DOMDocument();
-    if (!$input->loadXML($object['MODS']->content)) {
-      drupal_set_message(t('Error loading Book View XML.'));
-      return t('Error loading Book View XML.');
-    }
-    else {
-      $proc->importStylesheet($xsl);
-      return $proc->transformToXML($input);
-    }
-  }
 }
 
 /**

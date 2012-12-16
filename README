@@ -30,9 +30,6 @@ Current dependancies:
 dependencies[] = xml_forms
 dependencies[] = islandora_content_model_forms
 dependencies[] = islandora_collection_manager
-dependencies[] = islandora_bookviewer
-
-@todo Change so it is only dependant on islandora_bookviewer.
 
 INSTALLATION
 ------------

@@ -3,6 +3,7 @@
 /**
  * @file
  *
+ * @todo Document.
  */
 
 /**
@@ -16,15 +17,23 @@
  *   and the values are the PIDs of the page objects.
  */
 function islandora_book_get_pages(FedoraObject $object) {
-  $query = 'select $object $page from <#ri>
+  $query = 'select $object $page $label from <#ri>
             where $object <fedora-rels-ext:isMemberOf> <info:fedora/' . $object->id . '>
+            and $object <fedora-model:label> $label
             and ($object <info:islandora/islandora-system:def/paged-item-info#sequenceNumber> $page
             or $object <http://islandora.ca/ontology/relsext#isSequenceNumber> $page)
             order by $page';
   $results = $object->repository->ri->query($query);
-  $page_numbers = array_map(function($o) { return $o['page']['value']; }, $results);
-  $page_pids = array_map(function($o) { return $o['object']['value']; }, $results);
-  return array_combine($page_numbers, $page_pids);
+  $map = function($o) {
+    return array(
+      'label' => $o['label']['value'],
+      'page' => $o['page']['value'],
+      'pid' => $o['object']['value']
+    );
+  };
+  $pages = array_map($map, $results);
+  $pids = array_map(function($o) { return $o['pid']; }, $pages);
+  return count($pids) ? array_combine($pids, $pages) : array();
 }
 
 /**

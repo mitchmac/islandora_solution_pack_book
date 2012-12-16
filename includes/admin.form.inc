@@ -25,8 +25,10 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
   $do_ocr = $get_default_value('islandora_book_do_ocr', TRUE);
   $ocr_path = $get_default_value('islandora_book_ocr_path', '/usr/bin/tesseract');
   $ocr_availible_message = islandora_book_admin_settings_form_ocr_availible_message($ocr_path);
+  $solr_enabled = module_exists('islandora_solr');
   $form = array(
     'islandora_book_solr_subject_field' => array(
+      '#access' => $solr_enabled,
       '#type' => 'textfield',
       '#title' => t('Solr subject field'),
       '#description' => t('The solr field containing your untokenized subject value, used to link between books with the same subject.'),
