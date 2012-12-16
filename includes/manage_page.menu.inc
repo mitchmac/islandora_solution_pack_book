@@ -3,27 +3,28 @@
 /**
  * @file
  *
- * The book management menu.
+ * The page management menu.
  */
 
 /**
- * Displays all the book management forms in a set of vertical tabs.
+ * Displays all the page management forms in a set of vertical tabs.
  *
  * @param FedoraObject $object
- *   The book object to manage.
+ *   The page object to manage.
  *
  * @return array
  *   A renderable array containing all the management forms related to
  *   book objects.
  */
-function islandora_book_manage_menu(FedoraObject $object) {
-  module_load_include('inc', 'islandora_book', 'includes/update_derived_datastreams.form');
-  module_load_include('inc', 'islandora_book', 'includes/delete_pages.form');
+function islandora_book_page_manage_menu(FedoraObject $object) {
+  //module_load_include('inc', 'islandora_book', 'includes/update_derived_datastreams.form');
+  //module_load_include('inc', 'islandora_book', 'includes/delete_pages.form');
   return array(
-    'manage_book' => array(
+    'manage_page' => array(
       '#type' => 'vertical_tabs',
       '#weight' => 0,
       '#prefix' => '',
+      /*
       'update_datastreams' => array(
         // @todo Replace with check for permission.
         '#access' => TRUE,
@@ -42,6 +43,7 @@ function islandora_book_manage_menu(FedoraObject $object) {
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
       )
+      */
     )
   );
 }
