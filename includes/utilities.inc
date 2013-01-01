@@ -33,7 +33,16 @@ function islandora_book_get_pages(FedoraObject $object) {
   };
   $pages = array_map($map, $results);
   $pids = array_map(function($o) { return $o['pid']; }, $pages);
-  return count($pids) ? array_combine($pids, $pages) : array();
+  $pages = count($pids) ? array_combine($pids, $pages) : array();
+  uasort($pages, function($a, $b) {
+      $a_page = (is_array($a) && isset($a['page'])) ? $a['page'] : 0;
+      $b_page = (is_array($b) && isset($b['page'])) ? $b['page'] : 0;
+      if ($a_page == $b_page) {
+        return 0;
+      }
+      return ($a_page < $b_page) ? -1 : 1;
+    });
+  return $pages;
 }
 
 /**

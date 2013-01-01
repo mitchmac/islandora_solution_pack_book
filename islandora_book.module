@@ -163,7 +163,7 @@ function islandora_book_pages_access_callback($object = NULL) {
   if (!isset($object)) {
     return FALSE;
   }
-  $is_book = in_array('islandora:iaBookCModel', $object->models);
+  $is_book = in_array('islandora:bookCModel', $object->models);
   return $is_book && islandora_object_access_callback(FEDORA_VIEW, $object);
 }
 
@@ -188,7 +188,7 @@ function islandora_book_manage_access_callback($object = NULL) {
   );
   $manage_actions_access = array_map('user_access', $manage_actions);
   $can_perform_a_action = array_sum($manage_actions_access) > 0;
-  $is_book = in_array('islandora:iaBookCModel', $object->models);
+  $is_book = in_array('islandora:bookCModel', $object->models);
   return $is_book && $can_perform_a_action && islandora_object_access_callback(FEDORA_MANAGE, $object);
 }
 
@@ -243,6 +243,10 @@ function islandora_book_theme() {
       'arguments' => array('object' => NULL),
       'file' => 'theme/islandora_book.theme.inc',
       'template' => 'theme/islandora-pages-list'
+    ),
+    'islandora_book_reorder_pages_form' => array(
+      'render element' => 'form',
+      'file' => 'includes/reorder_pages.form.inc',
     ),
     /*
       'islandora_book_page_table' => array(
@@ -301,14 +305,6 @@ function islandora_book_islandora_xml_form_builder_form_associations() {
   return array(
     'islandora_book_mods_form' => array(
       'content_model' => 'islandora:bookCModel',
-      'form_name' => 'Islandora Book MODS Form',
-      'dsid' => 'MODS',
-      'title_field' => array('titleInfo', 'title'),
-      'transform' => 'mods_to_dc.xsl',
-      'template' => FALSE,
-    ),
-    'islandora_book_ia_mods_form' => array(
-      'content_model' => 'islandora:iabookCModel',
       'form_name' => 'Islandora Book MODS Form',
       'dsid' => 'MODS',
       'title_field' => array('titleInfo', 'title'),
@@ -419,4 +415,47 @@ function islandora_book_islandora_pagecmodel_islandora_ingest_steps() {
       'file' => 'includes/upload_pages.form.inc'
     )
   );
+}
+
+/**
+ * Implements hook_form_islandora_object_properties_form_alter().
+ */
+function islandora_book_form_islandora_object_properties_form_alter(array &$form, array &$form_state) {
+  $object = $form_state['object'];
+  if (in_array('islandora:bookCModel', $object->models)) {
+    $form['delete']['#value'] = t('Delete Book');
+  }
+}
+
+/**
+ * Implements hook_form_islandora_object_properties_form_alter().
+ */
+function islandora_book_form_islandora_delete_object_form_alter(array &$form, array &$form_state) {
+  $object = $form_state['object'];
+  if (in_array('islandora:bookCModel', $object->models)) {
+    $form['description']['#markup'] = t('This will remove the book object and all related page objects. This action cannot be undone.');
+    $form['#submit'] = array('islandora_book_islandora_delete_object_form_delete_pages_submit');
+  }
+}
+
+/**
+ * Submit handler responsible from deleting the all the page objects related to
+ * the book object being deleted.
+ *
+ * @param array $form
+ *   The Drupal form.
+ * @param array $form_state
+ *   The Drupal form state.
+ */
+function islandora_book_islandora_delete_object_form_delete_pages_submit(array $form, array &$form_state) {
+  module_load_include('inc', 'islandora_book', 'includes/delete_pages.batch');
+  module_load_include('inc', 'islandora_book', 'includes/utilities');
+  $object = $form_state['object'];
+  $pages = array_map(function($o) { return $o['pid']; }, islandora_book_get_pages($object));
+  batch_set(islandora_book_delete_pages_batch($object, $pages));
+  // Called from within this submit handler rather than from the Drupal Form API
+  // as we need the object to exist to generate the pages and if we run this
+  // batch operation from a submit handler any submit handlers to be called
+  // afterwards will not get called, which is a bug/feature of the Form API.
+  islandora_delete_object_form_submit($form, $form_state);
 }

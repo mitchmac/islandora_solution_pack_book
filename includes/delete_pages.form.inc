@@ -22,6 +22,7 @@
  */
 function islandora_book_delete_pages_form(array $form, array &$form_state, FedoraObject $object) {
   module_load_include('inc', 'islandora_book', 'includes/utilities');
+  $form_state['object'] = $object;
   $pages = islandora_book_get_pages($object);
   return array(
     'table' => array(
@@ -50,6 +51,8 @@ function islandora_book_delete_pages_form(array $form, array &$form_state, Fedor
  *   The Drupal form state.
  */
 function islandora_book_delete_pages_form_submit(array $form, array &$form_state) {
-  $pages = array_filter($form_state['values']['table']);
-  array_map('islandora_delete_object', $pages);
+  module_load_include('inc', 'islandora_book', 'includes/delete_pages.batch');
+  $object = $form_state['object'];
+  $pages = array_values(array_filter($form_state['values']['table']));
+  batch_set(islandora_book_delete_pages_batch($object, $pages));
 }

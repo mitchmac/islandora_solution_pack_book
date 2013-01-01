@@ -25,7 +25,7 @@ function islandora_book_manage_menu(FedoraObject $object) {
       '#type' => 'vertical_tabs',
       '#weight' => 0,
       '#prefix' => '',
-      'update_datastreams' => array(
+      /*'update_datastreams' => array(
         // @todo Replace with check for permission.
         '#access' => TRUE,
         '#title' => t('Update Derived Datastreams'),
@@ -33,7 +33,7 @@ function islandora_book_manage_menu(FedoraObject $object) {
         'form' => drupal_get_form('islandora_book_update_derived_datastreams_form', $object),
         '#collapsible' => TRUE,
         '#collapsed' => FALSE,
-      ),
+        ),*/
       'reorder_pages' => array(
         // @todo Replace with check for permission.
         '#access' => TRUE,
