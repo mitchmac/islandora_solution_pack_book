@@ -27,6 +27,7 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
   $ocr_availible_message = islandora_book_admin_settings_form_ocr_availible_message($ocr_path);
   $solr_enabled = module_exists('islandora_solr');
   $ocr_languages = islandora_book_get_tesseract_langauges();
+  $large_image_enabled = module_exists('islandora_large_image');
   $form = array(
     'islandora_book_solr_subject_field' => array(
       '#access' => $solr_enabled,
@@ -36,10 +37,11 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
       '#default_value' => $get_default_value('islandora_book_solr_subject_field', 'mods.subject'),
     ),
     'islandora_book_create_images' => array(
+      '#disabled' => !$large_image_enabled,
       '#type' => 'checkbox',
       '#title' => t('Create derivative images locally?'),
-      '#description' => t('Check this box to have images produced locally on ingest.'),
-      '#default_value' => $get_default_value('islandora_book_create_images', TRUE),
+      '#description' => t('Check this box to have images produced locally on ingest. <b>Requires</b> <i>Large image solution pack</i> to be enabled.'),
+      '#default_value' => $large_image_enabled && $get_default_value('islandora_book_create_images', TRUE),
     ),
     'islandora_book_create_pdf' => array(
       '#type' => 'checkbox',
@@ -59,13 +61,27 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
         'event' => 'change'
       )
     ),
-    'do_ocr_fields_wrapper' => array (
+    'do_ocr_fields_wrapper' => array(
       '#prefix' => '<div id="do-ocr-fields-wrapper">',
       '#suffix' => '</div>',
-      'do_ocr_fields' => array (
+      'do_ocr_fields' => array(
         '#type' => 'fieldset',
         '#title' => t('OCR Settings'),
         '#access' => $do_ocr,
+        'islandora_book_ocr_path' => array(
+          '#type' => 'textfield',
+          '#prefix' => '<div id="ocr-path-wrapper">',
+          '#suffix' => '</div>',
+          '#title' => t('Path to tesseract executable'),
+          '#description' => t('Path to OCR program on your server.<br/>!msg', array('!msg' => $ocr_availible_message)),
+          '#default_value' => $ocr_path,
+          '#ajax' => array(
+            'callback' => 'islandora_book_admin_settings_form_ocr_path_ajax_callback',
+            'wrapper' => 'ocr-path-wrapper',
+            'effect' => 'fade',
+            'event' => 'change'
+          )
+        ),
         'islandora_book_ocr_languages' => array(
           '#type' => 'checkboxes',
           '#title' => t('Languages available for OCR'),
@@ -77,20 +93,12 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
                              unsure of availablilty'),
           '#default_value' => array_filter($get_default_value('islandora_book_ocr_languages', $ocr_languages)),
         ),
-        'islandora_book_ocr_path' => array(
-          '#type' => 'textfield',
-          '#prefix' => '<div id="ocr-path-wrapper">',
-          '#suffix' => '</div>',
-          '#title' => t('Path to OCR executable'),
-          '#description' => t('Path to OCR program on your server.<br/>!msg', array('!msg' => $ocr_availible_message)),
-          '#default_value' => $ocr_path,
-          '#ajax' => array(
-            'callback' => 'islandora_book_admin_settings_form_ocr_path_ajax_callback',
-            'wrapper' => 'ocr-path-wrapper',
-            'effect' => 'fade',
-            'event' => 'change'
-          )
-        )
+        'islandora_book_ocr_preprocess' => array(
+          '#title' => t('Preprocessing for typescripts?'),
+          '#description' => t('Will add additional processing for typewritten text. This script grayscales and sharpens an uploaded TIFF before performing OCR processes.<br/>This has been shown to improve OCR results for some images. Use with caution. Process can be lengthly and is resource intensive.<br/> If your image is already gray, this script will not run'),
+          '#type' => 'checkbox',
+          '#default_value' => $get_default_value('islandora_book_ocr_preprocess', FALSE)
+        ),
       )
     )
   );
@@ -147,7 +155,7 @@ function islandora_book_admin_settings_form_use_ocr_ajax_callback(array $form, a
 }
 
 /**
- * Ajax callback for the "ocr_path" textfield.
+ * Ajax callback for the "tesseract_path" textfield.
  *
  * @param array $form
  *   The Drupal form definition.
