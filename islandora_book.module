@@ -407,7 +407,7 @@ function islandora_book_islandora_pagecmodel_islandora_view_object($object, $pag
  */
 function islandora_book_islandora_pagecmodel_islandora_ingest_steps() {
   return array(
-    'islandora_large_image_upload' => array(
+    'islandora_book_upload_pages' => array(
       'weight' => 10,
       'type' => 'form',
       'form_id' => 'islandora_book_upload_pages_form',
@@ -420,7 +420,7 @@ function islandora_book_islandora_pagecmodel_islandora_ingest_steps() {
 /**
  * Implements hook_CMODEL_PID_islandora_ingest_post_ingest().
  */
-function islandora_book_islandora_pagecmodel_islandora_ingest_post_ingest($object) {
+function islandora_book_islandora_pagecmodel_islandora_ingest_post_ingest(FedoraObject $object) {
   module_load_include('inc', 'islandora_book', 'includes/page.proccess');
   islandora_book_page_create_all_derivatives($object);
 }

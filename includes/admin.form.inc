@@ -24,8 +24,11 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
   };
   $do_ocr = $get_default_value('islandora_book_do_ocr', TRUE);
   $ocr_path = $get_default_value('islandora_book_ocr_path', '/usr/bin/tesseract');
-  $ocr_availible_message = islandora_book_admin_settings_form_ocr_availible_message($ocr_path);
+  $ocr_availible_message = islandora_book_admin_settings_form_executable_availible_message($ocr_path);
+  $gimp_path = $get_default_value('islandora_book_gimp_path', '/usr/bin/gimp');
+  $gimp_availible_message = islandora_book_admin_settings_form_executable_availible_message($gimp_path);
   $solr_enabled = module_exists('islandora_solr');
+  $preprocess_ocr = $get_default_value('islandora_book_ocr_preprocess', FALSE);
   $ocr_languages = islandora_book_get_tesseract_langauges();
   $large_image_enabled = module_exists('islandora_large_image');
   $form = array(
@@ -97,8 +100,29 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
           '#title' => t('Preprocessing for typescripts?'),
           '#description' => t('Will add additional processing for typewritten text. This script grayscales and sharpens an uploaded TIFF before performing OCR processes.<br/>This has been shown to improve OCR results for some images. Use with caution. Process can be lengthly and is resource intensive.<br/> If your image is already gray, this script will not run'),
           '#type' => 'checkbox',
-          '#default_value' => $get_default_value('islandora_book_ocr_preprocess', FALSE)
+          '#default_value' => $preprocess_ocr,
+          '#ajax' => array(
+            'callback' => 'islandora_book_admin_settings_form_use_ocr_ajax_callback',
+            'wrapper' => 'do-ocr-fields-wrapper',
+            'effect' => 'fade',
+            'event' => 'change'
+          ),
         ),
+        'islandora_book_gimp_path' => array(
+          '#access' => $preprocess_ocr,
+          '#type' => 'textfield',
+          '#title' => t('Path to gimp executable'),
+          '#description' => t('Path to gimp on your server.<br/>!msg', array('!msg' => $gimp_availible_message)),
+          '#default_value' => $gimp_path,
+          '#prefix' => '<div id="gimp-path-wrapper">',
+          '#suffix' => '</div>',
+          '#ajax' => array(
+            'callback' => 'islandora_book_admin_settings_form_gimp_path_ajax_callback',
+            'wrapper' => 'gimp-path-wrapper',
+            'effect' => 'fade',
+            'event' => 'change'
+          )
+        )
       )
     )
   );
@@ -126,7 +150,7 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
  * @return string
  *   A message in html detailing if the given executable is accessible.
  */
-function islandora_book_admin_settings_form_ocr_availible_message($ocr_path) {
+function islandora_book_admin_settings_form_executable_availible_message($ocr_path) {
   $ocr_availible = exec("ls $ocr_path");
   if ($ocr_availible) {
     $image = theme_image(array('path' => 'misc/watchdog-ok.png', 'attributes' => array()));
@@ -155,7 +179,7 @@ function islandora_book_admin_settings_form_use_ocr_ajax_callback(array $form, a
 }
 
 /**
- * Ajax callback for the "tesseract_path" textfield.
+ * Ajax callback for the "ocr_path" textfield.
  *
  * @param array $form
  *   The Drupal form definition.
@@ -167,4 +191,19 @@ function islandora_book_admin_settings_form_use_ocr_ajax_callback(array $form, a
  */
 function islandora_book_admin_settings_form_ocr_path_ajax_callback(array $form, array $form_state) {
   return $form['do_ocr_fields_wrapper']['do_ocr_fields']['islandora_book_ocr_path'];
+}
+
+/**
+ * Ajax callback for the "gimp_path" textfield.
+ *
+ * @param array $form
+ *   The Drupal form definition.
+ * @param array $form_state
+ *   The Drupal form state.
+ *
+ * @return array
+ *   The element to render as part the ajax callback.
+ */
+function islandora_book_admin_settings_form_gimp_path_ajax_callback(array $form, array $form_state) {
+  return $form['do_ocr_fields_wrapper']['do_ocr_fields']['islandora_book_gimp_path'];
 }

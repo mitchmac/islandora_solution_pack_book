@@ -77,7 +77,8 @@ function islandora_book_page_get_derivative_source_file(FedoraObject $object, $p
   $object['OBJ']->getContent($filename);
   if ($preprocess && variable_get('islandora_book_ocr_do_preprocess', FALSE)) {
     // @todo check for gimp via admin setting
-    $command = "gimp -d -i -b '(munge-typeset-ocr {$filename} {$filename}.png 5.0 10.0 0.0 200.0 5.0)' -b '(gimp-quit 0)'";
+    $executable = variable_get('islandora_book_gimp_path', '/usr/bin/gimp');
+    $command = "$executable -d -i -b '(munge-typeset-ocr {$filename} {$filename}.png 5.0 10.0 0.0 200.0 5.0)' -b '(gimp-quit 0)'";
     exec($command, $output, $ret);
     if ($ret == 0) {
       file_unmanaged_delete($filename);

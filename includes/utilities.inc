@@ -69,6 +69,8 @@ function islandora_book_get_page_progression(FedoraObject $object) {
 /**
  * Gets the available languages that tesseract supports.
  *
+ * @todo Generate these values by looking at the tesseract install location.
+ *
  * @return array
  *   The supported languages where the key is the value tesseract recognizes and
  *   the value is a human readable version of the language.
@@ -84,4 +86,17 @@ function islandora_book_get_tesseract_langauges() {
     'jpn' => t('Japanese'),
     'ita' => t('Italian')
   );
+}
+
+/**
+ * Gets only the enabled languages as defined by the user.
+ *
+ * @return array
+ *   The enabled languages where the key is the value tesseract recognizes and
+ *   the value is a human readable version of the language.
+ */
+function islandora_book_get_enabled_tesseract_langauges() {
+  $tesseract_languages = islandora_book_get_tesseract_langauges();
+  $enabled_languages = array_filter(variable_get('islandora_book_ocr_languages', $tesseract_languages));
+  return array_intersect_key($tesseract_languages, $enabled_languages);
 }
