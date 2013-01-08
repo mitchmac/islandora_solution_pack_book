@@ -22,112 +22,106 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
   $get_default_value = function($name, $default) use($form_state) {
     return isset($form_state['values'][$name]) ? $form_state['values'][$name] : variable_get($name, $default);
   };
-  $do_ocr = $get_default_value('islandora_book_do_ocr', TRUE);
-  $ocr_path = $get_default_value('islandora_book_ocr_path', '/usr/bin/tesseract');
-  $ocr_availible_message = islandora_book_admin_settings_form_executable_availible_message($ocr_path);
-  $gimp_path = $get_default_value('islandora_book_gimp_path', '/usr/bin/gimp');
-  $gimp_availible_message = islandora_book_admin_settings_form_executable_availible_message($gimp_path);
-  $solr_enabled = module_exists('islandora_solr');
-  $preprocess_ocr = $get_default_value('islandora_book_ocr_preprocess', FALSE);
-  $ocr_languages = islandora_book_get_tesseract_langauges();
-  $large_image_enabled = module_exists('islandora_large_image');
+  $tesseract = $get_default_value('islandora_book_tesseract', '/usr/bin/tesseract');
+  $gimp = $get_default_value('islandora_book_gimp', '/usr/bin/gimp');
+  $gs = $get_default_value('islandora_book_gs', '/usr/bin/gs');
+  $languages = $get_default_value('islandora_book_tesseract_enabled_languages', drupal_map_assoc(array_keys(islandora_book_get_tesseract_languages())));
   $form = array(
-    'islandora_book_solr_subject_field' => array(
-      '#access' => $solr_enabled,
-      '#type' => 'textfield',
-      '#title' => t('Solr subject field'),
-      '#description' => t('The solr field containing your untokenized subject value, used to link between books with the same subject.'),
-      '#default_value' => $get_default_value('islandora_book_solr_subject_field', 'mods.subject'),
+    'solr_settings' => array(
+      // @todo I don't any of the Solr fields are in active use, make them unaccessible for now.
+      '#access' => FALSE,
+      '#disabled' => !module_exists('islandora_solr'),
+      '#type' => 'fieldset',
+      '#title' => t('SOLR Settings'),
+      '#description' => t('Various Solr fields for use to organize books. <b>Requires</b> <i>Islandora Solr</i> to be enabled.'),
+      'islandora_book_solr_subject_field' => array(
+        '#type' => 'textfield',
+        '#title' => t('Subject field'),
+        '#description' => t('The SOLR field containing the untokenized subject value, used to group books with the same subject.'),
+        '#default_value' => $get_default_value('islandora_book_solr_subject_field', 'mods.subject')
+      ),
     ),
-    'islandora_book_create_images' => array(
-      '#disabled' => !$large_image_enabled,
-      '#type' => 'checkbox',
-      '#title' => t('Create derivative images locally?'),
-      '#description' => t('Check this box to have images produced locally on ingest. <b>Requires</b> <i>Large image solution pack</i> to be enabled.'),
-      '#default_value' => $large_image_enabled && $get_default_value('islandora_book_create_images', TRUE),
-    ),
-    'islandora_book_create_pdf' => array(
-      '#type' => 'checkbox',
-      '#title' => t('Create derivative PDF locally?'),
-      '#description' => t('Check this box to have a PDF produced locally on ingest.'),
-      '#default_value' => $get_default_value('islandora_book_create_pdf', FALSE),
-    ),
-    'islandora_book_do_ocr' => array(
-      '#type' => 'checkbox',
-      '#title' => t('Perform OCR on incoming TIFF images?'),
-      '#description' => t('Do not check this box if OCR is performed on an external server, such as ABBYY'),
-      '#default_value' => $do_ocr,
-      '#ajax' => array(
-        'callback' => 'islandora_book_admin_settings_form_use_ocr_ajax_callback',
-        'wrapper' => 'do-ocr-fields-wrapper',
-        'effect' => 'fade',
-        'event' => 'change'
-      )
-    ),
-    'do_ocr_fields_wrapper' => array(
-      '#prefix' => '<div id="do-ocr-fields-wrapper">',
-      '#suffix' => '</div>',
-      'do_ocr_fields' => array(
+    'local_derivative_settings' => array(
+      '#type' => 'fieldset',
+      '#title' => t('Create Page Derivatives Locally'),
+      '#description' => t('When ingesting pages automatically create derivative datastreams on this server. If you intend to only use microservices to generate derivatives you should not have any of these settings enabled.'),
+      'islandora_book_ingest_derivatives' => array(
+        '#type' => 'checkboxes',
+        '#element_validate' => array('islandora_book_admin_settings_form_ingest_derivatives_validate'),
+        '#options' => array(
+          'pdf' => t('PDF datastream. <b>Requires</b> <i>ImageMagick</i>'),
+          'image' => t('Image datastreams (TN, JPEG, JP2). <b>Requires</b> <i>Large Image Solution Pack</i>'),
+          'ocr' => t('OCR datastreams (OCR, RAW_HOCR, ENCODED_OCR)')
+        ),
+        '#default_value' => $get_default_value('islandora_book_ingest_derivatives', drupal_map_assoc(array('pdf', 'image', 'ocr')))
+      ),
+      'pdf_derivative_settings' => array(
         '#type' => 'fieldset',
-        '#title' => t('OCR Settings'),
-        '#access' => $do_ocr,
-        'islandora_book_ocr_path' => array(
+        '#title' => t('PDF Settings'),
+        'islandora_book_gs' => array(
           '#type' => 'textfield',
-          '#prefix' => '<div id="ocr-path-wrapper">',
+          '#title' => t('GS (GhostScript)'),
+          '#description' => t('GhostScript is used to combined PDF files and generate a PDF repersentation of a Book.<br/>!msg',
+                          array('!msg' => islandora_book_admin_settings_form_executable_availible_message($gs))),
+          '#default_value' => $gs,
+          '#prefix' => '<div id="gimp-wrapper">',
           '#suffix' => '</div>',
-          '#title' => t('Path to tesseract executable'),
-          '#description' => t('Path to OCR program on your server.<br/>!msg', array('!msg' => $ocr_availible_message)),
-          '#default_value' => $ocr_path,
           '#ajax' => array(
-            'callback' => 'islandora_book_admin_settings_form_ocr_path_ajax_callback',
-            'wrapper' => 'ocr-path-wrapper',
+            'callback' => 'islandora_book_admin_settings_form_gimp_ajax_callback',
+            'wrapper' => 'gimp-wrapper',
             'effect' => 'fade',
             'event' => 'change'
           )
         ),
-        'islandora_book_ocr_languages' => array(
+      ),
+      'ocr_derivative_settings' => array(
+        '#type' => 'fieldset',
+        '#title' => t('OCR Settings'),
+        'islandora_book_tesseract' => array(
+          '#type' => 'textfield',
+          '#title' => t('Tesseract'),
+          '#description' => t('Tesseract is used to generate the OCR datastreams.<br/>!msg', array('!msg' => islandora_book_admin_settings_form_executable_availible_message($tesseract))),
+          '#default_value' => $tesseract,
+          '#prefix' => '<div id=oto-line"tesseract-wrapper">',
+          '#suffix' => '</div>',
+          '#ajax' => array(
+            'callback' => 'islandora_book_admin_settings_form_tesseract_ajax_callback',
+            'wrapper' => 'tesseract-wrapper',
+            'effect' => 'fade',
+            'event' => 'change'
+          ),
+        ),
+        'islandora_book_gimp' => array(
+          '#type' => 'textfield',
+          '#title' => t('Gimp'),
+          '#description' => t('Gimp is used to preprocess the source image before generating the OCR datastreams.<br/>!msg',
+                          array('!msg' => islandora_book_admin_settings_form_executable_availible_message($gimp))),
+          '#default_value' => $gimp,
+          '#prefix' => '<div id="gimp-wrapper">',
+          '#suffix' => '</div>',
+          '#ajax' => array(
+            'callback' => 'islandora_book_admin_settings_form_gimp_ajax_callback',
+            'wrapper' => 'gimp-wrapper',
+            'effect' => 'fade',
+            'event' => 'change'
+          )
+        ),
+        'islandora_book_tesseract_enabled_languages' => array(
           '#type' => 'checkboxes',
           '#title' => t('Languages available for OCR'),
-          '#options' => $ocr_languages,
+          '#options' => islandora_book_get_tesseract_languages(),
           '#description' => t('Select from the language packs available on your
                              processing server.<br/> These are normally found in
                              <strong>/usr/local/share/tessdata/</strong><br/>
                              Check with your systems admininistrator if you are
                              unsure of availablilty'),
-          '#default_value' => array_filter($get_default_value('islandora_book_ocr_languages', $ocr_languages)),
-        ),
-        'islandora_book_ocr_preprocess' => array(
-          '#title' => t('Preprocessing for typescripts?'),
-          '#description' => t('Will add additional processing for typewritten text. This script grayscales and sharpens an uploaded TIFF before performing OCR processes.<br/>This has been shown to improve OCR results for some images. Use with caution. Process can be lengthly and is resource intensive.<br/> If your image is already gray, this script will not run'),
-          '#type' => 'checkbox',
-          '#default_value' => $preprocess_ocr,
-          '#ajax' => array(
-            'callback' => 'islandora_book_admin_settings_form_use_ocr_ajax_callback',
-            'wrapper' => 'do-ocr-fields-wrapper',
-            'effect' => 'fade',
-            'event' => 'change'
-          ),
-        ),
-        'islandora_book_gimp_path' => array(
-          '#access' => $preprocess_ocr,
-          '#type' => 'textfield',
-          '#title' => t('Path to gimp executable'),
-          '#description' => t('Path to gimp on your server.<br/>!msg', array('!msg' => $gimp_availible_message)),
-          '#default_value' => $gimp_path,
-          '#prefix' => '<div id="gimp-path-wrapper">',
-          '#suffix' => '</div>',
-          '#ajax' => array(
-            'callback' => 'islandora_book_admin_settings_form_gimp_path_ajax_callback',
-            'wrapper' => 'gimp-path-wrapper',
-            'effect' => 'fade',
-            'event' => 'change'
-          )
+          '#default_value' => $languages,
         )
       )
     )
   );
   module_load_include('inc', 'islandora', 'includes/solution_packs');
-  $form += islandora_viewers_form('islandora_book_viewers', NULL, 'islandora:iaBookCModel');
+  $form += islandora_viewers_form('islandora_book_viewers', NULL, 'islandora:bookCModel');
   $form['book_viewers'] = $form['viewers'];
   $form['book_viewers']['#title'] = t('Book Viewers');
   unset($form['viewers']);
@@ -139,32 +133,56 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
 }
 
 /**
+ * Check if the required resouces are enabled.
+ *
+ * @param array $element
+ *   The element to check.
+ * @param array $form_state
+ *   The Drupal form state.
+ * @param array $form
+ *   The Drupal form definition.
+ */
+function islandora_book_admin_settings_form_ingest_derivatives_validate(array $element, array &$form_state, array $form) {
+  module_load_include('inc', 'islandora_book', 'includes/utilities');
+  // form_error() doesn't seem to work here, it prevents the submit but
+  // also prevents the value from being set above. So we are using
+  // drupal_set_message.
+  if ($element['#value']['pdf'] && !islandora_book_can_create_pdf()) {
+    $element['#value']['pdf'] = 0;
+    form_set_value($element, $element['#value'], $form_state);
+    drupal_set_message(t('ImagicMagick must be enabled to derive the PDF datastream.'), 'error');
+  }
+  if ($element['#value']['image'] && !islandora_book_can_create_images()) {
+    $element['#value']['image'] = 0;
+    form_set_value($element, $element['#value'], $form_state);
+    drupal_set_message(t('The Large Image solution pack must be enabled to derive image datastreams.'), 'error');
+  }
+}
+
+/**
  * Gets a message to display if the ocr program provided is accessible or not.
  *
- * @todo Add additional checks to see if the program is executable.
- * @todo Also check if the return value for 'ls' will work for all systems.
- *
- * @param string $ocr_path
- *   The path to an executable responsible for generating ocr data.
+ * @param string $path
+ *   The path to an executable to check for availability.
  *
  * @return string
  *   A message in html detailing if the given executable is accessible.
  */
-function islandora_book_admin_settings_form_executable_availible_message($ocr_path) {
-  $ocr_availible = exec("ls $ocr_path");
-  if ($ocr_availible) {
+function islandora_book_admin_settings_form_executable_availible_message($path) {
+  $available = is_executable($path);
+  if ($available) {
     $image = theme_image(array('path' => 'misc/watchdog-ok.png', 'attributes' => array()));
-    $message = t('Executable found at @ocr_path', array('@ocr_path' => $ocr_path));
+    $message = t('Executable found at @path', array('@path' => $path));
   }
   else {
     $image = theme_image(array('path' => 'misc/watchdog-error.png', 'attributes' => array()));
-    $message = t('Unable to locate executable at @ocr_path', array('@ocr_path' => $ocr_path));
+    $message = t('Unable to locate executable at @path', array('@path' => $path));
   }
   return $image . $message;
 }
 
 /**
- * Ajax callback for the "ocr" checkbox field
+ * Ajax callback for the Tesseract textfield.
  *
  * @param array $form
  *   The Drupal form definition.
@@ -174,12 +192,12 @@ function islandora_book_admin_settings_form_executable_availible_message($ocr_pa
  * @return array
  *   The element to render as part the ajax callback.
  */
-function islandora_book_admin_settings_form_use_ocr_ajax_callback(array $form, array $form_state) {
-  return $form['do_ocr_fields_wrapper'];
+function islandora_book_admin_settings_form_tesseract_ajax_callback(array $form, array $form_state) {
+  return $form['local_derivative_settings']['ocr_derivative_settings']['islandora_book_tesseract'];
 }
 
 /**
- * Ajax callback for the "ocr_path" textfield.
+ * Ajax callback for the Gimp textfield.
  *
  * @param array $form
  *   The Drupal form definition.
@@ -189,21 +207,6 @@ function islandora_book_admin_settings_form_use_ocr_ajax_callback(array $form, a
  * @return array
  *   The element to render as part the ajax callback.
  */
-function islandora_book_admin_settings_form_ocr_path_ajax_callback(array $form, array $form_state) {
-  return $form['do_ocr_fields_wrapper']['do_ocr_fields']['islandora_book_ocr_path'];
-}
-
-/**
- * Ajax callback for the "gimp_path" textfield.
- *
- * @param array $form
- *   The Drupal form definition.
- * @param array $form_state
- *   The Drupal form state.
- *
- * @return array
- *   The element to render as part the ajax callback.
- */
-function islandora_book_admin_settings_form_gimp_path_ajax_callback(array $form, array $form_state) {
-  return $form['do_ocr_fields_wrapper']['do_ocr_fields']['islandora_book_gimp_path'];
+function islandora_book_admin_settings_form_gimp_ajax_callback(array $form, array $form_state) {
+  return $form['local_derivative_settings']['ocr_derivative_settings']['islandora_book_gimp'];
 }

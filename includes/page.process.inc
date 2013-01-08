@@ -11,32 +11,48 @@
 /**
  * Generates all the derivatives for the given page object.
  *
+ * Derivatives are generated only if they have been enabled in the admin
+ * settings form for this module.
+ *
  * @param FedoraObject $object
  *   The page object that the derivatives will be generated for.
+ * @param string $language
+ *   The language the source image is in, as defined by tesseract.
+ * @param boolean $preprocess
+ *   Attempt to preprocess the image before generating the OCR.
  *
  * @return bool
- *   TRUE if successful, FALSE otherwise.
+ *   TRUE if all attempted derivatives were generated, FALSE otherwise.
  */
-function islandora_book_page_create_all_derivatives(FedoraObject $object) {
-  if (!isset($object['OBJ'])) {
-    $msg = t('Could not create derivatives for %s. No image file was uploaded.', array(
-             '%s' => $object->id));
-    drupal_set_message($msg, 'error');
+function islandora_book_page_create_all_derivatives(FedoraObject $object, $language, $preprocess = FALSE) {
+  if (!islandora_book_can_create_derivatives($object)) {
     return FALSE;
   }
-  // Conditionally generate images, if the large image solution pack is enabled
-  // and the users has enabled local generation of image datastreams.
-  $generated_images = TRUE;
-  if (variable_get('islandora_book_create_images', TRUE) && module_exists('islandora_large_image')) {
+  $create_images = variable_get('islandora_book_create_images', TRUE);
+  $create_pdf = variable_get('islandora_book_create_pdf', TRUE);
+  $create_ocr = variable_get('islandora_book_do_ocr', TRUE);
+  $successful = $create_images ? islandora_book_page_create_image_derivatives($object) : TRUE;
+  $successful &= $create_pdf ? islandora_book_page_create_pdf_derivatives($object) : TRUE;
+  $successful &= $create_ocr ? islandora_book_page_create_ocr_derivatives($object, $language, $preprocess) : TRUE;
+  return $successful;
+}
+
+/**
+ * Creates the image derivatives.
+ *
+ * @param FedoraObject $object
+ *   The page object that the derivative will be generated for.
+ *
+ * @return boolean
+ *   TRUE if successful, FALSE otherwise.
+ */
+function islandora_book_page_create_image_derivatives(FedoraObject $object) {
+  module_load_include('inc', 'islandora_book', 'includes/utilities');
+  if (islandora_book_can_generate_images()) {
     module_load_include('inc', 'islandora_large_image', 'includes/islandora_large_image.process');
-    $generated_images = islandora_large_image_create_all_derivatives($object);
+    return islandora_large_image_create_all_derivatives($object);
   }
-  // Conditionally generate images, if the users has enabled local generation of ocr datastreams.
-  $generated_ocr = TRUE;
-  if (variable_get('islandora_book_do_ocr', TRUE)) {
-    $generated_ocr = islandora_book_page_create_ocr_derivatives($object, TRUE);
-  }
-  return $generated_images && $generated_ocr;
+  return FALSE;
 }
 
 /**
@@ -44,17 +60,42 @@ function islandora_book_page_create_all_derivatives(FedoraObject $object) {
  *
  * @param FedoraObject $object
  *   The page object that the derivative will be generated for.
+ * @param string $language
+ *   The language the source image is in, as defined by tesseract.
  * @param boolean $preprocess
  *   Attempt to preprocess the image before generating the OCR.
  *
  * @return boolean
- *   TRUE if successfule, FALSE otherwise.
+ *   TRUE if successful, FALSE otherwise.
  */
-function islandora_book_page_create_ocr_derivatives(FedoraObject $object, $preprocess = FALSE) {
+function islandora_book_page_create_ocr_derivatives(FedoraObject $object, $language, $preprocess = FALSE) {
+  module_load_include('inc', 'islandora_book', 'includes/utilities');
+  if (!islandora_book_can_generate_ocr()) {
+    return FALSE;
+  }
+  islandora_book_page_set_ocr_generation_relationship_properties($object, $language, $preprocess);
   $filename = islandora_book_page_get_derivative_source_file($object, $preprocess);
-  $generated_ocr = islandora_book_page_create_ocr_derivative($object, $filename);
-  $generated_hocr = islandora_book_page_create_hocr_derivatives($object, $filename);
-  return $generated_ocr && $generated_hocr;
+  $successful = islandora_book_page_create_ocr_derivative($object, $language,  $filename);
+  $successful &= islandora_book_page_create_hocr_derivatives($object, $language, $filename);
+  return $successful;
+}
+
+/**
+ * Sets the given OCR generation settings in the object RELS-INT for the source
+ * image, for later reference.
+ *
+ * @param FedoraObject $object
+ *   The page object that the derivative will be generated for.
+ * @param string $language
+ *   The language the source image is in, as defined by tesseract.
+ * @param boolean $preprocess
+ *   Attempt to preprocess the source image before generating the OCR.
+ */
+function islandora_book_page_set_ocr_generation_relationship_properties(FedoraObject $object, $language, $preprocess) {
+  $rels_int = $object['OBJ']->relationships;
+  $preprocess = $preprocess ? 'true' : 'false';
+  islandora_book_set_relationship($rels_int, ISLANDORA_RELS_INT_URI, 'hasLanguage', $language, TRUE);
+  islandora_book_set_relationship($rels_int, ISLANDORA_RELS_INT_URI, 'preprocessOCR', $preprocess, TRUE);
 }
 
 /**
@@ -73,11 +114,10 @@ function islandora_book_page_create_ocr_derivatives(FedoraObject $object, $prepr
 function islandora_book_page_get_derivative_source_file(FedoraObject $object, $preprocess = FALSE) {
   $mime_detector = new MimeDetect();
   $ext = $mime_detector->getExtension($object['OBJ']->mimeType);
-  $filename = drupal_realpath("temporary://{$base_name}_OBJ.{$ext}");
+  $filename = drupal_realpath("temporary://{$object->id}_OBJ.{$ext}");
   $object['OBJ']->getContent($filename);
-  if ($preprocess && variable_get('islandora_book_ocr_do_preprocess', FALSE)) {
-    // @todo check for gimp via admin setting
-    $executable = variable_get('islandora_book_gimp_path', '/usr/bin/gimp');
+  if ($preprocess && islandora_book_can_preprocess_ocr()) {
+    $executable = variable_get('islandora_book_gimp', '/usr/bin/gimp');
     $command = "$executable -d -i -b '(munge-typeset-ocr {$filename} {$filename}.png 5.0 10.0 0.0 200.0 5.0)' -b '(gimp-quit 0)'";
     exec($command, $output, $ret);
     if ($ret == 0) {
@@ -93,13 +133,15 @@ function islandora_book_page_get_derivative_source_file(FedoraObject $object, $p
  *
  * @param FedoraObject $object
  *   The page object that the derivative will be generated for.
+ * @param string $language
+ *   The language the source image is in, as defined by tesseract.
  * @param string $filename
  *   The absolute path to the uploaded image file used to generate the OCR.
  *
  * @return boolean
  *   TRUE if successfule, FALSE otherwise.
  */
-function islandora_book_page_create_ocr_derivative(FedoraObject $object, $filename) {
+function islandora_book_page_create_ocr_derivative(FedoraObject $object, $language, $filename) {
   $executable = variable_get('islandora_book_ocr_path', '/usr/bin/tesseract');
   $output = $ret = '';
   exec("$executable $filename $filename -l $language", $output, $ret);
@@ -120,13 +162,15 @@ function islandora_book_page_create_ocr_derivative(FedoraObject $object, $filena
  *
  * @param FedoraObject $object
  *   The page object that the derivative will be generated for.
+ * @param string $language
+ *   The language the source image is in, as defined by tesseract.
  * @param string $filename
  *   The absolute path to the uploaded image file used to generate the OCR.
  *
  * @return boolean
  *   TRUE if successfule, FALSE otherwise.
  */
-function islandora_book_page_create_hocr_derivatives(FedoraObject $object, $filename) {
+function islandora_book_page_create_hocr_derivatives(FedoraObject $object, $language, $filename) {
   $executable = variable_get('islandora_book_ocr_path', '/usr/bin/tesseract');
   exec("$executable $filename $filename -l $language hocr", $output, $ret);
   if ($ret != '0') {

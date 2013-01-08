@@ -40,10 +40,19 @@ function islandora_book_menu() {
     'islandora/object/%islandora_object/manage/book' => array(
       'title' => 'Book',
       'type' => MENU_LOCAL_TASK,
-      'page callback' => 'islandora_book_manage_menu',
+      'page callback' => 'islandora_book_manage_book_menu',
       'page arguments' => array(2),
       'access callback' => 'islandora_book_manage_access_callback',
       'access arguments' => array(2),
+      'file' => 'includes/manage_book.menu.inc',
+    ),
+    'islandora/object/%islandora_object/manage/book/ingest' => array(
+      'title' => 'Add Page',
+      'page callback' => 'islandora_book_ingest_page',
+      'page arguments' => array(2),
+      'type' => MENU_LOCAL_ACTION,
+      'access callback' => 'islandora_object_access_callback',
+      'access arguments' => array(FEDORA_INGEST, 2),
       'file' => 'includes/manage_book.menu.inc',
     ),
     'islandora/object/%islandora_object/manage/page' => array(
@@ -54,88 +63,8 @@ function islandora_book_menu() {
       'access callback' => 'islandora_book_page_manage_access_callback',
       'access arguments' => array(2),
       'file' => 'includes/manage_page.menu.inc',
-    ),
-    'islandora/object/%islandora_object/manage/book/ingest' => array(
-      'title' => 'Create, append, or insert pages',
-      'page callback' => 'islandora_book_ingest_pages',
-      'page arguments' => array(2),
-      'type' => MENU_LOCAL_ACTION,
-      'access callback' => 'islandora_object_access_callback',
-      'access arguments' => array(FEDORA_INGEST, 2),
-      'file' => 'includes/ingest_pages.form.inc',
     )
   );
-    /*
-    'restore/books' => array(
-      'title' => t('Deleted Books'),
-      'file' => 'management/book_undelete.inc',
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('book_undelete_form'),
-      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_DELETED_BOOKS),
-      'type' => MENU_NORMAL_ITEM,
-    ),
-    'islandora/book/updatepage' => array(
-      'page callback' => 'page_management_wrapper',
-      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_BOOK),
-      'file' => 'ObjectManager.inc',
-      'type' => MENU_CALLBACK,
-    ),
-    'islandora/book/upload' => array(
-      'page callback' => 'upload_pages',
-      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_BOOK),
-      'file' => 'pageload/upload_frame.inc',
-      'type' => MENU_CALLBACK,
-    ),
-    'islandora/book/borndigital' => array(
-      'page callback' => 'create_borndigital',
-      'access arguments' => array(FEDORA_VIEW),
-      'file' => 'management/born_digital.inc',
-      'type' => MENU_CALLBACK,
-    ),
-    'islandora/book/upload_setup' => array(
-      'page callback' => 'upload_setup',
-      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_BOOK),
-      'file' => 'pageload/upload_frame.inc',
-      'type' => MENU_CALLBACK,
-    ),
-    'islandora/book/process_file' => array(
-      'page callback' => 'process_file',
-      'access arguments' => array(FEDORA_VIEW),
-      'file' => 'pageload/upload_frame.inc',
-      'type' => MENU_CALLBACK,
-    ),
-    'islandora/book/process_page_directory' => array(
-      'page callback' => 'prep_add_form',
-      'access arguments' => array(FEDORA_VIEW),
-      'file' => 'pageload/prepare_add_pages_form.inc',
-      'type' => MENU_CALLBACK,
-    ),
-    'islandora/book/delete_book_files' => array(
-      'page callback' => 'delete_book_page_files',
-      'access arguments' => array(FEDORA_VIEW),
-      'file' => 'pageload/upload_frame.inc',
-      'type' => MENU_CALLBACK,
-    ),
-    'islandora/page/manage' => array(
-      'page callback' => 'islandora_book_page_management',
-      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_PAGE),
-      'file' => 'page_object_manager.inc',
-      'type' => MENU_CALLBACK,
-    ),
-    'islandora/book/manage' => array(
-      'page callback' => 'islandora_book_display_links',
-      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_BOOK),
-      'file' => 'management/IslandoraBookDisplayLinks.inc',
-      'type' => MENU_CALLBACK,
-    ),
-    'islandora/book/management' => array(
-      'page callback' => 'book_management_wrapper',
-      'access arguments' => array(PERM_ISLANDORA_BOOK_MANAGE_BOOK),
-      'file' => 'book_object_manager.inc',
-      'type' => MENU_CALLBACK,
-      )
-  );
-*/
 }
 
 /**
@@ -246,25 +175,8 @@ function islandora_book_theme() {
     ),
     'islandora_book_reorder_pages_form' => array(
       'render element' => 'form',
-      'file' => 'includes/reorder_pages.form.inc',
-    ),
-    /*
-      'islandora_book_page_table' => array(
-      'arguments' => array('element' => NULL),
-      'file' => 'management/IslandoraBookPageTable.inc',
-    ),
-    'islandora_book_page_reorder_table' => array(
-      'arguments' => array('element' => NULL),
-      'file' => 'management/IslandoraPageReorderTable.inc',
-    ),
-    'islandora_book_undelete_table' => array(
-      'arguments' => array('element' => NULL),
-      'file' => 'management/IslandoraBookUndelete.inc',
-    ),
-    'islandora_file_reorder_table' => array(
-      'arguments' => array('element' => NULL),
-      'file' => 'management/IslandoraFileReorderTable.inc',
-      )*/
+      'file' => 'includes/manage_book.menu.inc',
+    )
   );
 }
 
@@ -336,9 +248,6 @@ function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
   $page_content_model->owner = 'fedoraAdmin';
   $page_content_model->label = 'Islandora Page Content Model';
   $page_content_model->models = 'fedora-system:ContentModel-3.0';
-  $page_content_model->relationships->add(FEDORA_MODEL_URI, 'hasService', 'islandora:viewerSdef');
-  $page_content_model->relationships->add(FEDORA_MODEL_URI, 'hasService', 'islandora:jp2Sdef');
-  $page_content_model->relationships->add(FEDORA_MODEL_URI, 'hasService', 'islandora:tei2htmlSdef');
   // DS-COMPOSITE-MODEL Datastream
   $datastream = $page_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'M');
   $datastream->label = 'DS-COMPOSITE-MODEL';
@@ -346,7 +255,7 @@ function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
   $datastream->setContentFromFile("$module_path/xml/islandora_pageCModel_ds_composite_model.xml", FALSE);
   $page_content_model->ingestDatastream($datastream);
   // Internet Archive Book Content Model
-  $ia_book_content_model = $connection->repository->constructObject('islandora:iabookCModel');
+  $ia_book_content_model = $connection->repository->constructObject('islandora:bookCModel');
   $ia_book_content_model->owner = 'fedoraAdmin';
   $ia_book_content_model->label = 'Islandora Internet Archive Book Content Model';
   $ia_book_content_model->models = 'fedora-system:ContentModel-3.0';
@@ -354,7 +263,7 @@ function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
   $datastream = $ia_book_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'M');
   $datastream->label = 'DS-COMPOSITE-MODEL';
   $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/islandora_iabookCModel_ds_composite_model.xml", FALSE);
+  $datastream->setContentFromFile("$module_path/xml/islandora_bookCModel_ds_composite_model.xml", FALSE);
   $ia_book_content_model->ingestDatastream($datastream);
   // Book Collection
   $book_collection = $connection->repository->constructObject('islandora:bookCollection');
@@ -389,9 +298,9 @@ function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
 /**
  * Implements hook_CMODEL_PID_islandora_view_object().
  */
-function islandora_book_islandora_iabookcmodel_islandora_view_object($object) {
+function islandora_book_islandora_bookcmodel_islandora_view_object($object) {
   $output = theme('islandora_book_book', array('object' => $object));
-  return array('islandora_book' => $output);
+  return array('islandora_book' =>  $output);
 }
 
 /**
@@ -422,7 +331,12 @@ function islandora_book_islandora_pagecmodel_islandora_ingest_steps() {
  */
 function islandora_book_islandora_pagecmodel_islandora_ingest_post_ingest(FedoraObject $object) {
   module_load_include('inc', 'islandora_book', 'includes/page.proccess');
-  islandora_book_page_create_all_derivatives($object);
+  if (!islandora_book_page_create_all_derivatives($object)) {
+    $msg = t('Could not create all derivatives for %s, For more information please check the logs.', array(
+             '%s' => $object->id));
+    drupal_set_message($msg, 'error');
+    return FALSE;
+  }
 }
 
 /**
