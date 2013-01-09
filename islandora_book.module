@@ -170,9 +170,9 @@ function islandora_book_theme() {
       'file' => 'theme/islandora_book.theme.inc',
       'template' => 'theme/islandora-pages-list'
     ),
-    'islandora_book_reorder_pages_form' => array(
+    'islandora_book_manage_book_sequences_form' => array(
       'render element' => 'form',
-      'file' => 'includes/manage_book.menu.inc',
+      'file' => 'theme/islandora_book.theme.inc',
     )
   );
 }

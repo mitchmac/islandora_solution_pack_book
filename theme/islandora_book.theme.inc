@@ -95,3 +95,30 @@ function islandora_book_preprocess_islandora_book_pages(array &$variables) {
   $module_path = drupal_get_path('module', 'islandora_book');
   drupal_add_css("$module_path/css/islandora_book.css");
 }
+
+/**
+ * Implements theme_form_id().
+ */
+function theme_islandora_book_manage_book_sequences_form($variables) {
+  $form = $variables['form'];
+  $rows = array();
+  $weight_class = 'islandora-book-page-weight';
+  $table = &$form['table'];
+  foreach (element_children($table['rows']) as $id) {
+    $row = &$table['rows'][$id];
+    $row['weight']['#attributes'] = array('class' => array($weight_class));
+    $rows[] = array(
+      'data' => array(
+        drupal_render($row['pid']),
+        drupal_render($row['label']),
+        drupal_render($row['weight']),
+      ),
+      'class' => array('draggable'),
+    );
+  }
+  $table_id = 'islandora-reorder-pages-table';
+  $output = theme('table', array('header' => $table['#header'], 'rows' => $rows, 'attributes' => array('id' => $table_id)));
+  $output .= drupal_render_children($form);
+  drupal_add_tabledrag($table_id, 'order', 'sibling', $weight_class);
+  return $output;
+}

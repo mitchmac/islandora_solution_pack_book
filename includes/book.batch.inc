@@ -305,14 +305,14 @@ function islandora_book_create_images_batch_operation(array $pages, array &$cont
  * @return array
  *   The batch definition.
  */
-function islandora_book_reorder_pages_batch(FedoraObject $object, array $pages) {
+function islandora_book_sequence_pages_batch(FedoraObject $object, array $pages) {
   return array(
     'operations' => array(
-      array('islandora_book_reorder_pages_batch_operation', array($pages))
+      array('islandora_book_sequence_pages_batch_operation', array($pages))
     ),
-    'finished' => 'islandora_book_book_batch_finished',
-    'title' => t('Reordering @label\'s pages', array('@label' => $object->label)),
-    'init_message' => t('Preparing to reorder @label\'s pages.', array('@label' => $object->label)),
+    'finished' => 'islandora_book_batch_finished',
+    'title' => t('Sequenceing @label\'s pages', array('@label' => $object->label)),
+    'init_message' => t('Preparing to sequence @label\'s pages.', array('@label' => $object->label)),
     'progress_message' => t('Updated @current out of @total.'),
     'error_message' => t('An error has occured.'),
     'file' => drupal_get_path('module', 'islandora_book') . '/includes/book.batch.inc',
@@ -327,7 +327,7 @@ function islandora_book_reorder_pages_batch(FedoraObject $object, array $pages) 
  * @param array $context
  *   The context of this batch operation.
  */
-function islandora_book_reorder_pages_batch_operation(array $pages, array &$context) {
+function islandora_book_sequence_pages_batch_operation(array $pages, array &$context) {
   module_load_include('inc', 'islandora_book', 'includes/utilities');
   $page = islandora_book_start_batch_operation($pages, $context);
   $object = islandora_object_load($page);

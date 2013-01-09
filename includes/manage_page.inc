@@ -14,7 +14,7 @@
  *
  * @return array
  *   A renderable array containing all the management forms related to
- *   book objects.
+ *   page objects.
  */
 function islandora_book_manage_page_menu(FedoraObject $object) {
   return array(
@@ -23,7 +23,7 @@ function islandora_book_manage_page_menu(FedoraObject $object) {
       'pdf' => array(
         // @todo Replace with check for permission.
         '#access' => TRUE,
-        '#title' => t('Create PDF'),
+        '#title' => t('Create a PDF'),
         '#type' => 'fieldset',
         'form' => drupal_get_form('islandora_book_manage_page_pdf_form', $object),
         '#collapsible' => TRUE,
@@ -59,7 +59,7 @@ function islandora_book_manage_page_menu(FedoraObject $object) {
  * @param array $form_state
  *   The Drupal form state.
  * @param FedoraObject $object
- *   The page object whose OCR datastreams will be updated.
+ *   The page object to be updated.
  *
  * @return array
  *   The Drupal form definition.
@@ -74,7 +74,7 @@ function islandora_book_manage_page_ocr_form(array $form_state, array &$form_sta
     'language' => array(
       '#title' => t('Language'),
       '#type' => 'select',
-      '#description' => t('Please select the language that the page is written in.'),
+      '#description' => t('Please select the language the page is written in.'),
       '#options' => $languages,
      ),
     'preprocess' => array(
@@ -87,13 +87,13 @@ function islandora_book_manage_page_ocr_form(array $form_state, array &$form_sta
     'submit' => array(
       '#disabled' => !$can_derive,
       '#type' => 'submit',
-      '#value' => t('Update OCR'),
+      '#value' => t('Perform OCR'),
     )
   );
 }
 
 /**
- * Submit handler for the update page OCR form.
+ * Submit handler for the manage page OCR form.
  *
  * @param array $form
  *   The Drupal form definition.
@@ -101,7 +101,7 @@ function islandora_book_manage_page_ocr_form(array $form_state, array &$form_sta
  *   The Drupal form state.
  */
 function islandora_book_manage_page_ocr_form_submit(array $form_state, array &$form_state) {
-  module_load_include('inc', 'islandora_book', 'includes/page.process');
+  module_load_include('inc', 'islandora_book', 'includes/utilities');
   $object = $form_state['object'];
   $options = array(
     'language' => $form_state['values']['language'],
@@ -111,14 +111,14 @@ function islandora_book_manage_page_ocr_form_submit(array $form_state, array &$f
 }
 
 /**
- * Updates this objects derived image datastreams.
+ * Derives the given pages objects image datastreams.
  *
  * @param array $form
  *   The Drupal form definition.
  * @param array $form_state
  *   The Drupal form state.
  * @param FedoraObject $object
- *   The page object whose image datastreams will be updated.
+ *   The page object to be updated.
  *
  * @return array
  *   The Drupal form definition.
@@ -141,7 +141,7 @@ function islandora_book_manage_page_images_form(array $form_state, array &$form_
 }
 
 /**
- * Submit handler for the update page images form.
+ * Submit handler for the manage page images form.
  *
  * @param array $form
  *   The Drupal form definition.
@@ -155,14 +155,14 @@ function islandora_book_manage_page_images_form_submit(array $form_state, array 
 }
 
 /**
- * Updates this objects pdf datastreams.
+ * Derives the given page objects PDF datastream.
  *
  * @param array $form
  *   The Drupal form definition.
  * @param array $form_state
  *   The Drupal form state.
  * @param FedoraObject $object
- *   The page object whose image datastreams will be updated.
+ *   The page object to be updated.
  *
  * @return array
  *   The Drupal form definition.
@@ -191,7 +191,7 @@ function islandora_book_manage_page_pdf_form(array $form_state, array &$form_sta
 }
 
 /**
- * Submit handler for the update page images form.
+ * Submit handler for the manage page pdf form.
  *
  * @param array $form
  *   The Drupal form definition.

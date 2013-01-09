@@ -22,10 +22,8 @@ function islandora_book_upload_page_form(array $form, array &$form_state) {
   };
   $upload_size = min((int)ini_get('post_max_size'), (int)ini_get('upload_max_filesize'));
   $extensions = array('tiff tif');
+  $can_preprocess = islandora_book_can_preprocess_ocr();
   $languages = islandora_book_get_enabled_tesseract_languages();
-  // Not all uploaded pages will have a language.
-  $languages['none'] = t('Not Applicable');
-  $default_language = $get_default_value('language', 'none');
   return array(
     'file' => array(
       '#title' => t('Page'),
@@ -39,39 +37,26 @@ function islandora_book_upload_page_form(array $form, array &$form_state) {
         'file_validate_size' => array($upload_size * 1024 * 1024),
       ),
     ),
-    // We present the language and preprocess options even if OCR is not enabled.
-    // If the user changes their mind at a different time, we will know how to
-    // generate the OCR datastreams.
     'language' => array(
       '#title' => t('Language'),
       '#type' => 'select',
-      '#description' => t('Please select the language that the page is written in, if applicable. If <b>Not Applicable</b>, is selected no OCR will be generated.'),
+      '#description' => t('Please select the language that the page is written in.'),
       '#options' => $languages,
-      '#default_value' => $default_language,
-      '#ajax' => array(
-        'callback' => 'islandora_book_upload_page_form_language_ajax_callback',
-        'wrapper' => 'preprocess-wrapper',
-        'effect' => 'fade',
-        'event' => 'change'
-      )
-    ),
-    'preprocess_wrapper' => array(
-      '#type' => 'markup',
-      '#prefix' => '<div id="preprocess-wrapper">',
-      '#suffix' => '</div>',
-      'preprocess' => array(
-        '#access' => $default_language != 'none',
-        '#title' => t('Preprocessing for typescripts?'),
-        '#type' => 'checkbox',
-        '#description' => t('Will add additional processing for typewritten text. This script grayscales and sharpens the uploaded ingested TIFF before performing OCR processes.<br/>This has been shown to improve OCR results for some images. Use with caution. Process can be lengthly and is resource intensive.<br/>'),
-        '#default_value' => $get_default_value('preprocess', TRUE),
-      )
+      '#default_value' => $get_default_value('language', NULL),
+     ),
+    'preprocess' => array(
+      '#disabled' => !$can_preprocess,
+      '#title' => t('Preprocessing for typescripts?'),
+      '#type' => 'checkbox',
+      '#description' => t('Will add additional processing for typewritten text. This script grayscales and sharpens the archival TIFF before performing OCR processes.<br/>This has been shown to improve OCR results for some images. Use with caution. Process can be lengthly and is resource intensive.<br/>'),
+      '#default_value' => $get_default_value('preprocess', $can_preprocess),
     )
   );
 }
 
 /**
- * Sets the appropriate datastream for the uploaded tiff page image.
+ * Sets RELS-EXT/RELS-INT properties and uploads the file as the 'OBJ'
+ * datastream.
  *
  * @param array $form
  *   The Drupal form definition.
@@ -101,16 +86,4 @@ function islandora_book_upload_page_form_submit(array $form, array &$form_state)
   islandora_book_set_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'isPageNumber', (string) $num_pages, TRUE);
   islandora_book_set_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'isSection', '1', TRUE);
   islandora_book_set_relationship($rels_ext, FEDORA_RELS_EXT_URI, 'isMemberOf', $book->id);
-}
-
-/**
- * Returns the renderable elemenet for the "languge" select ajax callback.
- *
- * @param array $form
- *   The Drupal form definition.
- * @param array $form_state
- *   The Drupal form state.
- */
-function islandora_book_upload_page_form_language_ajax_callback(array $form, array $form_state) {
-  return $form['preprocess_wrapper'];
 }
