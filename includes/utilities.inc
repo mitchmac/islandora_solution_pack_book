@@ -112,15 +112,16 @@ function islandora_book_get_enabled_tesseract_languages() {
  * @return string
  *   The path to the source file.
  */
-function islandora_book_get_derivative_source(AbstractFedoraObject $object, $dsid) {
+function islandora_book_get_page_derivative_source(AbstractFedoraObject $object, $dsid) {
   if (!islandora_book_can_derive($object, $dsid)) {
     return FALSE;
   }
-  $source_dsid = islandora_book_get_derivative_source($dsid);
+  $source_dsid = islandora_book_get_page_derivative_source_id($dsid);
   $mime_detector = new MimeDetect();
   $ext = $mime_detector->getExtension($object[$source_dsid]->mimeType);
   $source_file = drupal_realpath("temporary://{$object->id}_{$source_dsid}.{$ext}");
-  return $object[$source_dsid]->getContent($source_file);
+  $object[$source_dsid]->getContent($source_file);
+  return $source_file;
 }
 
 /**
@@ -222,7 +223,7 @@ function islandora_book_can_create_images() {
  *   TRUE if the source datastream exists, FALSE otherwise.
  */
 function islandora_book_page_has_derivative_source(AbstractFedoraObject $object, $dsid) {
-  $source_dsid = islandora_book_get_page_derivative_source($dsid);
+  $source_dsid = islandora_book_get_page_derivative_source_id($dsid);
   return isset($object[$source_dsid]);
 }
 
@@ -236,7 +237,7 @@ function islandora_book_page_has_derivative_source(AbstractFedoraObject $object,
  * @return string
  *   The datastream ID of the source for the given derivative.
  */
-function islandora_book_get_page_derivative_source($dsid) {
+function islandora_book_get_page_derivative_source_id($dsid) {
   // @todo Change TIFF to OBJ, when done testing.
   $source_datastreams = array(
     'PDF' => 'TIFF',
@@ -244,7 +245,7 @@ function islandora_book_get_page_derivative_source($dsid) {
     'RAW_HOCR' => 'TIFF',
     'ENCODED_OCR' => 'TIFF',
   );
-  return $source_datastream[$dsid];
+  return $source_datastreams[$dsid];
 }
 
 /**
@@ -262,9 +263,7 @@ function islandora_book_page_derive_pdf(FedoraObject $object, array $options = a
   if (!islandora_book_can_derive($object, 'PDF')) {
     return FALSE;
   }
-  $source_dsid = islandora_book_get_derivative_source('PDF');
-  $source_file = drupal_realpath("temporary://{$object->id}_{$source_dsid}.tiff");
-  $object[$source_dsid]->getContent($source_file);
+  $source_file = islandora_book_get_page_derivative_source($object, 'PDF');
   $pdf_file = islandora_book_convert_to_pdf($source_file, $options);
   file_unmanaged_delete($source_file);
   return $pdf_file;
@@ -353,40 +352,18 @@ function islandora_book_pdf_combine(array $files, $out) {
  *   TRUE on success, FALSE otherwise.
  */
 function islandora_book_page_derive_ocr_datastreams(FedoraObject $object, array $options = array('language' => 'eng', 'preprocess' => FALSE)) {
-  $source_file = $options['preprocess'] ?
-    islandora_book_get_ocr_preprocessed_derivative_source($object) :
-    islandora_book_get_derivative_source($object, 'OCR');
+  $source_file = islandora_book_get_page_derivative_source($object, 'OCR');
+  if ($options['preprocess']) {
+    $source_file = islandora_book_ocr_preprocess_image($source_file);
+  }
   $ocr_file = islandora_book_convert_to_ocr($source_file, $options);
   $hocr_file = islandora_book_convert_to_hocr($source_file, $options);
   $encoded_hocr_file = islandora_book_encode_hocr($hocr_file);
   $ret = islandora_book_update_datastream($object, $ocr_file, 'OCR');
   $ret &= islandora_book_update_datastream($object, $hocr_file, 'RAW_HOCR');
   $ret &= islandora_book_update_datastream($object, $encoded_hocr_file, 'ENCODED_OCR');
-  array_map('file_unmanaged_delete', array($source_file, $hocr_file, $encoded_hocr_file));
+  array_map('file_unmanaged_delete', array($source_file, $hocr_file, $hocr_file, $encoded_hocr_file));
   return $ret;
-}
-
-/**
- * Creates a PDF derivative for the given Page object.
- *
- * @param FedoraObject $object
- *   The page object that the derivative will be generated for.
- * @param array $options
- *   The options for tesseract/gimp.
- *
- * @return string
- *   The absolute path to the derived file if successful, FALSE otherwise.
- */
-function islandora_book_page_derive_ocr(FedoraObject $object, array $options = array('language' => 'eng', 'preprocess' => FALSE)) {
-  if (!islandora_book_can_derive_ocr($object)) {
-    return FALSE;
-  }
-  $source_file = $options['preprocess'] ?
-    islandora_book_get_ocr_preprocessed_derivative_source($object) :
-    islandora_book_get_derivative_source($object, 'OCR');
-  $ocr_file = islandora_book_convert_to_ocr($source_file, $options);
-  file_unmanaged_delete($source_file);
-  return $ocr_file;
 }
 
 /**
@@ -401,8 +378,7 @@ function islandora_book_page_derive_ocr(FedoraObject $object, array $options = a
  *   A absolute path to the preprocess file if successful, if unsuccessful the
  *   unpreprocessed file is returned.
  */
-function islandora_book_get_ocr_preprocessed_derivative_source(FedoraObject $object) {
-  $source_file = islandora_book_get_derivative_source('OCR');
+function islandora_book_ocr_preprocess_image($source_file) {
   $executable = variable_get('islandora_book_gimp', '/usr/bin/gimp');
   $dest_file = "$source_file.png";
   $command = "{$executable} -d -i -b '(munge-typeset-ocr {$source_file} {$dest_file} 5.0 10.0 0.0 200.0 5.0)' -b '(gimp-quit 0)'";
@@ -431,9 +407,13 @@ function islandora_book_convert_to_ocr($image_file, array $options) {
   $out_file = "$image_file.txt";
   $executable = variable_get('islandora_book_tesseract', '/usr/bin/tesseract');
   $output = array(); $ret = 0;
-  exec("{$executable} {$image_file} {$image_file} -l {$options['language']}", $output, $ret);
+  $command = "{$executable} {$image_file} {$image_file} -l {$options['language']}";
+  exec($command, $output, $ret);
   if ($ret != '0') {
     file_put_contents($out_file, 'No OCR availible');
+    $message = 'tesseract failed to create ocr<br/>Error: @ret<br/>Command: @command<br/>Output: @output';
+    $variables = array('@ret' => $ret, '@command' => $command, '@output' => $output);
+    watchdog('islandora_book', $message, $variables, WATCHDOG_ERROR);
   }
   return $out_file;
 }
@@ -455,6 +435,9 @@ function islandora_book_convert_to_hocr($image_file, array $options) {
   $output = array(); $ret = 0;
   exec("{$executable} {$image_file} {$image_file} -l {$options['language']} hocr", $output, $ret);
   if ($ret != '0') {
+    $message = 'tesseract failed to create hocr<br/>Error: @ret<br/>Command: @command<br/>Output: @output';
+    $variables = array('@ret' => $ret, '@command' => "convert $command_args", '@output' => $output);
+    watchdog('islandora_book', $message, $variables, WATCHDOG_ERROR);
     return FALSE;
   }
   return $out_file;
@@ -469,7 +452,7 @@ function islandora_book_convert_to_hocr($image_file, array $options) {
  * @return string
  *   The absolute path to the encoded HOCR file if successful, FALSE otherwise.
  */
-function islandora_book_encode_hocr($file, array $options) {
+function islandora_book_encode_hocr($file) {
   $proc = new XSLTProcessor();
   // Convert the hocr from html 4.01 transitional to xhtml and lower case
   // the text.
@@ -563,4 +546,5 @@ function islandora_book_update_datastream(AbstractFedoraObject $object, $file, $
   $ds->setContentFromFile($file);
   $ds->label = isset($label) ? $label : $dsid;
   $ds->mimetype = isset($mimetype) ? $mimetype : $mime_detector->getMimetype($file);
+  return TRUE;
 }
