@@ -28,7 +28,7 @@ function islandora_book_admin_settings_form(array $form, array &$form_state) {
   $languages = $get_default_value('islandora_book_tesseract_enabled_languages', drupal_map_assoc(array_keys(islandora_book_get_tesseract_languages())));
   $form = array(
     'solr_settings' => array(
-      // @todo I don't any of the Solr fields are in active use, make them unaccessible for now.
+      // @todo I don't any of the Solr fields are in active use, make them inaccessible for now.
       '#access' => FALSE,
       '#disabled' => !module_exists('islandora_solr'),
       '#type' => 'fieldset',

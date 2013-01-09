@@ -1,4 +1,0 @@
-<fmm:MethodMap name="methodmap" xmlns:fmm="http://fedora.comm.nsdlib.org/service/methodmap">
-  <fmm:Method operationName="getMetadata"/>
-  <fmm:Method operationName="getRegion"/>
-</fmm:MethodMap>

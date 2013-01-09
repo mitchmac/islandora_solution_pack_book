@@ -244,8 +244,29 @@ function islandora_book_get_page_derivative_source_id($dsid) {
     'OCR' => 'TIFF',
     'RAW_HOCR' => 'TIFF',
     'ENCODED_OCR' => 'TIFF',
+    'TN' => 'TIFF',
+    'JPG' => 'TIFF',
+    'JP2' => 'TIFF',
   );
   return $source_datastreams[$dsid];
+}
+
+/**
+ * Creates a PDF derivative for the given Page object.
+ *
+ * @param FedoraObject $object
+ *   The page object that the derivative will be generated for.
+ * @param array $options
+ *   The options to be passed to convert.
+ *
+ * @return string
+ *   The absolute path to the derived file if successful, FALSE otherwise.
+ */
+function islandora_book_page_derive_pdf_datastream(FedoraObject $object, array $options = array('-compress' => 'LZW')) {
+  $pdf_file = islandora_book_page_derive_pdf($object, $options);
+  $ret = islandora_book_update_datastream($object, $pdf_file, 'PDF');
+  file_unmanaged_delete($pdf_file);
+  return $ret;
 }
 
 /**
@@ -341,6 +362,20 @@ function islandora_book_pdf_combine(array $files, $out) {
 }
 
 /**
+ * Creates all the image derivatives for the given Page object.
+ *
+ * @param FedoraObject $object
+ *   The page object that the derivative will be generated for.
+ *
+ * @return boolean
+ *   TRUE if successful, FALSE otherwise.
+ */
+function islandora_book_page_derive_image_datastreams(FedoraObject $object) {
+  module_load_include('inc', 'islandora_large_image', 'includes/islandora_large_image.process');
+  return islandora_large_image_create_all_derivatives($object);
+}
+
+/**
  * Creates the OCR, RAW_HOCR, and ENCODED_OCR datastreams for the given Page object.
  *
  * @param FedoraObject $object
@@ -351,17 +386,25 @@ function islandora_book_pdf_combine(array $files, $out) {
  * @return boolean
  *   TRUE on success, FALSE otherwise.
  */
-function islandora_book_page_derive_ocr_datastreams(FedoraObject $object, array $options = array('language' => 'eng', 'preprocess' => FALSE)) {
+function islandora_book_page_derive_ocr_datastreams(FedoraObject $object, array $options = NULL) {
+  $rels_ext = $object->relationships;
+  $options = !empty($options) ? $options : array(
+    'language' =>  islandora_book_get_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'hasLanguage', 'eng'),
+    'preprocess' => islandora_book_get_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'preprocess', FALSE)
+  );
   $source_file = islandora_book_get_page_derivative_source($object, 'OCR');
-  if ($options['preprocess']) {
-    $source_file = islandora_book_ocr_preprocess_image($source_file);
-  }
+  $source_file = $options['preprocess'] ? islandora_book_ocr_preprocess_image($source_file) : $source_file;
   $ocr_file = islandora_book_convert_to_ocr($source_file, $options);
   $hocr_file = islandora_book_convert_to_hocr($source_file, $options);
   $encoded_hocr_file = islandora_book_encode_hocr($hocr_file);
   $ret = islandora_book_update_datastream($object, $ocr_file, 'OCR');
   $ret &= islandora_book_update_datastream($object, $hocr_file, 'RAW_HOCR');
   $ret &= islandora_book_update_datastream($object, $encoded_hocr_file, 'ENCODED_OCR');
+  $language = $options['language'];
+  $preprocess = $options['preprocess'] ? 'true' : 'false';
+  $rels_ext = $object->relationships;
+  islandora_book_set_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'hasLanguage', $language, TRUE);
+  islandora_book_set_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'preprocess', $preprocess, TRUE);
   array_map('file_unmanaged_delete', array($source_file, $hocr_file, $hocr_file, $encoded_hocr_file));
   return $ret;
 }
@@ -463,7 +506,7 @@ function islandora_book_encode_hocr($file) {
   $input->loadXML($xml_string);
   $path = drupal_get_path('module', 'islandora_book');
   $xsl = new DOMDocument();
-  $xsl->load($path . '/xsl/hocrToLowerhocr.xsl');
+  $xsl->load($path . '/data/xsl/hocrToLowerhocr.xsl');
   $xsl = $proc->importStylesheet($xsl);
   $result = $proc->transformToDoc($input);
   // Create new transformed file.

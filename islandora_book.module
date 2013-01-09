@@ -35,16 +35,15 @@ function islandora_book_menu() {
       'page arguments' => array(2),
       'access callback' => 'islandora_book_pages_access_callback',
       'access arguments' => array(2),
-      'file' => 'includes/pages.menu.inc',
     ),
     'islandora/object/%islandora_object/manage/book' => array(
       'title' => 'Book',
       'type' => MENU_LOCAL_TASK,
       'page callback' => 'islandora_book_manage_book_menu',
       'page arguments' => array(2),
-      'access callback' => 'islandora_book_manage_access_callback',
+      'access callback' => 'islandora_book_manage_book_access_callback',
       'access arguments' => array(2),
-      'file' => 'includes/manage_book.menu.inc',
+      'file' => 'includes/manage_book.inc',
     ),
     'islandora/object/%islandora_object/manage/book/ingest' => array(
       'title' => 'Add Page',
@@ -53,16 +52,16 @@ function islandora_book_menu() {
       'type' => MENU_LOCAL_ACTION,
       'access callback' => 'islandora_object_access_callback',
       'access arguments' => array(FEDORA_INGEST, 2),
-      'file' => 'includes/manage_book.menu.inc',
+      'file' => 'includes/manage_book.inc',
     ),
     'islandora/object/%islandora_object/manage/page' => array(
       'title' => 'Page',
       'type' => MENU_LOCAL_TASK,
-      'page callback' => 'islandora_book_page_manage_menu',
+      'page callback' => 'islandora_book_manage_page_menu',
       'page arguments' => array(2),
-      'access callback' => 'islandora_book_page_manage_access_callback',
+      'access callback' => 'islandora_book_manage_page_access_callback',
       'access arguments' => array(2),
-      'file' => 'includes/manage_page.menu.inc',
+      'file' => 'includes/manage_page.inc',
     )
   );
 }
@@ -105,7 +104,7 @@ function islandora_book_pages_access_callback($object = NULL) {
  * @return boolean
  *   TRUE if it should be shown, and FALSE if it should not be shown.
  */
-function islandora_book_manage_access_callback($object = NULL) {
+function islandora_book_manage_book_access_callback($object = NULL) {
   if (!isset($object)) {
     return FALSE;
   }
@@ -130,7 +129,7 @@ function islandora_book_manage_access_callback($object = NULL) {
  * @return boolean
  *   TRUE if it should be shown, and FALSE if it should not be shown.
  */
-function islandora_book_page_manage_access_callback($object = NULL) {
+function islandora_book_manage_page_access_callback($object = NULL) {
   if (!isset($object)) {
     return FALSE;
   }
@@ -181,36 +180,6 @@ function islandora_book_theme() {
 }
 
 /**
- * Implements hook_help().
- */
-function islandora_book_help($path, $arg) {
-  switch ($path) {
-    case 'admin/help#islandora_book':
-      return t('<p>The Islandora Book Module allows users to create digital
-                representations of books within the Fedora Repository. A book
-                object is created using !mods data. A collection of associated
-                page objects may then be created created. Page objects are
-                created by ingesting a zipped folder of TIFF images, each
-                representing a distinct page. Page TIFFs are used to create a
-                series of Fedora datastreams on ingestion.  These streams
-                include derivative images for display - JPEGS, Thumbnails, and
-                JP2s, and one ore more OCR streams for text display and analysis
-                </p>
-                <h3>Configuration</h3>
-                <p>The page datatreams may be created on this server, or on an
-                external processing server with !microservices.<br/> To process
-                images from TIFFS on this server check <strong>Create derivative
-                images locally?</strong> on the admin page. (Link at the bottom
-                of this page).<br/> TO create OCR streams on this server check
-                <strong>Perform OCR on incoming TIFF images?</strong>.<br/><br/>
-                </p>', array(
-                  '!microservices' => l("Fedora Microservices", 'https://github.com/Islandora/fedora_microservices'),
-                  '!mods' => l('MODS', 'http://www.loc.gov/standards/mods/'))
-      );
-  }
-}
-
-/**
  * Implements hook_islandora_xml_form_builder_form_associations().
  */
 function islandora_book_islandora_xml_form_builder_form_associations() {
@@ -243,6 +212,7 @@ function islandora_book_islandora_xml_form_builder_forms() {
  */
 function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
   $module_path = drupal_get_path('module', 'islandora_book');
+  $datastreams_path = "$module_path/data/datastreams";
   // Page Content Model
   $page_content_model = $connection->repository->constructObject('islandora:pageCModel');
   $page_content_model->owner = 'fedoraAdmin';
@@ -252,19 +222,19 @@ function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
   $datastream = $page_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'M');
   $datastream->label = 'DS-COMPOSITE-MODEL';
   $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/islandora_pageCModel_ds_composite_model.xml", FALSE);
+  $datastream->setContentFromFile("$datastreams_path/data/datastreams/islandora_pageCModel_ds_composite_model.xml", FALSE);
   $page_content_model->ingestDatastream($datastream);
-  // Internet Archive Book Content Model
-  $ia_book_content_model = $connection->repository->constructObject('islandora:bookCModel');
-  $ia_book_content_model->owner = 'fedoraAdmin';
-  $ia_book_content_model->label = 'Islandora Internet Archive Book Content Model';
-  $ia_book_content_model->models = 'fedora-system:ContentModel-3.0';
+  // Book Content Model
+  $book_content_model = $connection->repository->constructObject('islandora:bookCModel');
+  $book_content_model->owner = 'fedoraAdmin';
+  $book_content_model->label = 'Islandora Internet Archive Book Content Model';
+  $book_content_model->models = 'fedora-system:ContentModel-3.0';
   // DS-COMPOSITE-MODEL Datastream
-  $datastream = $ia_book_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'M');
+  $datastream = $book_content_model->constructDatastream('DS-COMPOSITE-MODEL', 'M');
   $datastream->label = 'DS-COMPOSITE-MODEL';
   $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/islandora_bookCModel_ds_composite_model.xml", FALSE);
-  $ia_book_content_model->ingestDatastream($datastream);
+  $datastream->setContentFromFile("$datastreams_path/xml/islandora_bookCModel_ds_composite_model.xml", FALSE);
+  $book_content_model->ingestDatastream($datastream);
   // Book Collection
   $book_collection = $connection->repository->constructObject('islandora:bookCollection');
   $book_collection->owner = 'fedoraAdmin';
@@ -275,7 +245,7 @@ function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
   $datastream = $book_collection->constructDatastream('COLLECTION_POLICY', 'M');
   $datastream->label = 'COLLECTION_POLICY';
   $datastream->mimetype = 'text/xml';
-  $datastream->setContentFromFile("$module_path/xml/islandora_book_collection_policy.xml", FALSE);
+  $datastream->setContentFromFile("$datastreams_path/xml/islandora_book_collection_policy.xml", FALSE);
   $book_collection->ingestDatastream($datastream);
   // TN Datastream
   $datastream = $book_collection->constructDatastream('TN', 'M');
@@ -288,7 +258,7 @@ function islandora_book_islandora_required_objects(IslandoraTuque $connection) {
       'title' => 'Islandora book',
       'objects' => array(
         $page_content_model,
-        $ia_book_content_model,
+        $book_content_model,
         $book_collection
       )
     )
@@ -330,8 +300,19 @@ function islandora_book_islandora_pagecmodel_islandora_ingest_steps() {
  * Implements hook_CMODEL_PID_islandora_ingest_post_ingest().
  */
 function islandora_book_islandora_pagecmodel_islandora_ingest_post_ingest(FedoraObject $object) {
-  module_load_include('inc', 'islandora_book', 'includes/page.proccess');
-  if (!islandora_book_page_create_all_derivatives($object)) {
+  module_load_include('inc', 'islandora_book', 'includes/utilities');
+  $success = TRUE;
+  $derive = variable_get('islandora_book_ingest_derivatives', drupal_map_assoc(array('pdf', 'image', 'ocr')));
+  if ($derive['pdf']) {
+    $success &= islandora_book_can_derive('PDF', $object) && islandora_book_page_derive_pdf_datastream($object);
+  }
+  if ($derive['image']) {
+    $success &= islandora_book_can_derive('JP2', $object) && islandora_book_page_derive_image_datastreams($object);
+  }
+  if ($derive['ocr']) {
+    $success &= islandora_book_can_derive('OCR', $object) && islandora_book_page_derive_ocr_datastreams($object);
+  }
+  if (!$success) {
     $msg = t('Could not create all derivatives for %s, For more information please check the logs.', array(
              '%s' => $object->id));
     drupal_set_message($msg, 'error');
@@ -380,4 +361,17 @@ function islandora_book_islandora_delete_object_form_delete_pages_submit(array $
   // batch operation from a submit handler any submit handlers to be called
   // afterwards will not get called, which is a bug/feature of the Form API.
   islandora_delete_object_form_submit($form, $form_state);
+}
+
+/**
+ * Renders the Pages local menu task.
+ *
+ * @param FedoraObject $object
+ *   The book object to fetch the pages from.
+ *
+ * @return string
+ *   The HTML repersentation of the given books pages.
+ */
+function islandora_book_pages_menu(FedoraObject $object) {
+  return theme('islandora_book_pages', array('object' => $object));
 }

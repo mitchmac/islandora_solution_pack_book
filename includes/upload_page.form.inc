@@ -15,7 +15,7 @@
  * @param array $form_state
  *   The Drupal form state.
  */
-function islandora_book_upload_pages_form(array $form, array &$form_state) {
+function islandora_book_upload_page_form(array $form, array &$form_state) {
   module_load_include('inc', 'islandora_book', 'includes/utilities');
   $get_default_value = function($name, $default) use($form_state) {
     return isset($form_state['values'][$name]) ? $form_state['values'][$name] : $default;
@@ -51,7 +51,7 @@ function islandora_book_upload_pages_form(array $form, array &$form_state) {
       '#options' => $languages,
       '#default_value' => $default_language,
       '#ajax' => array(
-        'callback' => 'islandora_book_upload_pages_form_language_ajax_callback',
+        'callback' => 'islandora_book_upload_page_form_language_ajax_callback',
         'wrapper' => 'preprocess-wrapper',
         'effect' => 'fade',
         'event' => 'change'
@@ -80,57 +80,29 @@ function islandora_book_upload_pages_form(array $form, array &$form_state) {
  * @param array $form_state
  *   The Drupal form state.
  */
-function islandora_book_upload_pages_form_submit(array $form, array &$form_state) {
+function islandora_book_upload_page_form_submit(array $form, array &$form_state) {
   module_load_include('inc', 'islandora_book', 'includes/utilities');
   $object = islandora_ingest_form_get_object($form_state);
-  $file = file_load($form_state['values']['file']);
-  $object->label = $file->filename;
-  $filename = drupal_realpath($file->uri);
-  islandora_book_upload_pages_form_add_update_datastream($object, 'OBJ', $filename);
-  // The TIFF file is considered archival and isn't required, for future use.
-  islandora_book_upload_pages_form_add_update_datastream($object, 'TIFF', $filename);
-  // Set the language/preprocess options of the upload file in the RELS-INT
-  $rels_int = $object['OBJ']->relationships;
-  $language = $form_state['values']['language'];
-  islandora_book_set_relationship($rels_int, ISLANDORA_RELS_INT_URI, 'hasLanguage', $language, TRUE);
-  $preprocess = $form_state['values']['preprocess'] ? 'true' : 'false';
-  islandora_book_set_relationship($rels_int, ISLANDORA_RELS_INT_URI, 'preprocessOCR', $preprocess, TRUE);
+  $file = file_load($form_state['values']['file'])->filename;
+  $object->label = $file;
+  islandora_book_update_datastream($object, $file, 'OBJ');
+  file_managed_delete($file);
   // Update RELS-EXT properties, page/sequence/etc, and append the page at the
   // end of the book.
   $rels_ext = $object->relationships;
+  $language = $form_state['values']['language'];
+  $preprocess = $form_state['values']['preprocess'] ? 'true' : 'false';
   $configuration = islandora_ingest_form_get_configuration($form_state);
   $book = islandora_object_load($configuration['book']);
   $pages = islandora_book_get_pages($book);
   $num_pages = count($pages);
-  islandora_book_set_relationship($rels_ext, FEDORA_RELS_EXT_URI, 'isMemberOf', $book->id);
+  islandora_book_set_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'hasLanguage', $language, TRUE);
+  islandora_book_set_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'preprocess', $preprocess, TRUE);
   islandora_book_set_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'isPageOf', $book->id);
   islandora_book_set_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'isSequenceNumber', (string) $num_pages, TRUE);
   islandora_book_set_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'isPageNumber', (string) $num_pages, TRUE);
   islandora_book_set_relationship($rels_ext, ISLANDORA_RELS_EXT_URI, 'isSection', '1', TRUE);
-}
-
-/**
- * Add or update the given datastream, with the given file's contents.
- *
- * @param FedoraObject $object
- *   The object that owns the created/updated datastream.
- * @param string $dsid
- *   The ID of the datastream to create/update.
- * @param string $file
- *   The absolute path to a file whose content's will be used to update the
- *   datastream.
- */
-function islandora_book_upload_pages_form_add_update_datastream(NewFedoraObject $object, $dsid, $filename) {
-  if (empty($object[$dsid])) {
-    $ds = $object->constructDatastream($dsid, 'M');
-    $object->ingestDatastream($ds);
-  }
-  else {
-    $ds = $object[$dsid];
-  }
-  $ds->setContentFromFile($filename);
-  $ds->label = 'Archival IMAGE';
-  $ds->mimetype = 'image/tiff';
+  islandora_book_set_relationship($rels_ext, FEDORA_RELS_EXT_URI, 'isMemberOf', $book->id);
 }
 
 /**
@@ -141,6 +113,6 @@ function islandora_book_upload_pages_form_add_update_datastream(NewFedoraObject 
  * @param array $form_state
  *   The Drupal form state.
  */
-function islandora_book_upload_pages_form_language_ajax_callback(array $form, array $form_state) {
+function islandora_book_upload_page_form_language_ajax_callback(array $form, array $form_state) {
   return $form['preprocess_wrapper'];
 }

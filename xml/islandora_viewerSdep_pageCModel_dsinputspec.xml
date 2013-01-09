@@ -1,7 +1,0 @@
-<fbs:DSInputSpec label="viewerSdepInputSpec" xmlns:fbs="http://fedora.comm.nsdlib.org/service/bindspec">
-  <fbs:DSInput DSMax="1" DSMin="1" DSOrdinality="false" wsdlMsgPartName="DC">
-    <fbs:DSInputLabel>DC</fbs:DSInputLabel>
-    <fbs:DSMIME>text/xml</fbs:DSMIME>
-    <fbs:DSInputInstruction/>
-  </fbs:DSInput>
-</fbs:DSInputSpec>

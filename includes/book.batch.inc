@@ -238,7 +238,7 @@ function islandora_book_create_ocr_batch_operation(array $pages, array $options,
   module_load_include('inc', 'islandora_book', 'includes/utilities');
   $page = islandora_book_start_batch_operation($pages, $context);
   $object = islandora_object_load($page);
-  $context['results']['successful'][] = islandora_book_page_derive_ocr_datastreams($object);
+  $context['results']['successful'][] = islandora_book_page_derive_ocr_datastreams($object, $options);
   $finished_message = array('Performed OCR on @successful of @total pages.');
   islandora_book_end_batch_operation($context, 1, $finished_message);
   $context['message'] = t('Performing OCR on page @page of @total.', array(
@@ -283,11 +283,10 @@ function islandora_book_create_images_batch(FedoraObject $object, array $pages) 
  *   The context of this batch operation.
  */
 function islandora_book_create_images_batch_operation(array $pages, array &$context) {
-  module_load_include('inc', 'islandora_large_image', 'includes/islandora_large_image.process');
   module_load_include('inc', 'islandora_book', 'includes/utilities');
   $page = islandora_book_start_batch_operation($pages, $context);
   $object = islandora_object_load($page);
-  $context['results']['successful'][] = islandora_large_image_create_all_derivatives($object);
+  $context['results']['successful'][] = islandora_book_page_derive_image_datastreams($object);
   $finished_message = array('Created images for @successful of @total pages.');
   islandora_book_end_batch_operation($context, 1, $finished_message);
   $context['message'] = t('Creating images for page @page of @total.', array(
