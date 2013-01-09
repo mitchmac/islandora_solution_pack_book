@@ -4,8 +4,6 @@
  * @file
  *
  * Defines all the hooks this module implements.
- *
- * @todo Since we don't have the tabs module, we need to create paths for Books.
  */
 
 // Permissions

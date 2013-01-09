@@ -25,9 +25,7 @@ function islandora_book_upload_page_form(array $form, array &$form_state) {
   $languages = islandora_book_get_enabled_tesseract_languages();
   // Not all uploaded pages will have a language.
   $languages['none'] = t('Not Applicable');
-  // @todo Make the default language an option in the admin menu.
-  $default_language = in_array('eng', array_keys($languages)) ? 'eng' : NULL;
-  $default_language = $get_default_value('language', $default_language);
+  $default_language = $get_default_value('language', 'none');
   return array(
     'file' => array(
       '#title' => t('Page'),
